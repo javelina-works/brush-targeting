@@ -1,0 +1,40 @@
+[project]
+name = "brush-targeting"
+version = "0.1.0"
+description = "A local-first app for identifying woody brush from an orthophoto and planning efficient treatment routes."
+authors = [
+    {name = "Kellan Cerveny",email = "kjcerveny@gmail.com"}
+]
+license = {text = "AGPL-3.0 License"}
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "panel (==1.6.0)",
+    "geopandas (==1.0.1)",
+    "geoviews (==1.14.0)",
+    "ipyleaflet (==0.19.2)",
+    "rasterio (==1.4.3)",
+    "rio-tiler (==7.4.0)",
+    "numpy (==2.2.2)",
+    "matplotlib (==3.10.0)",
+    "scikit-image (>=0.25.1,<0.26.0)",
+    "bokeh (==3.6.2)",
+    "fastapi (==0.115.7)",
+    "ipywidgets (==8.1.5)",
+    "ortools (==9.11.4210)",
+    "pandas (==2.2.3)",
+    "param (==2.2.0)",
+    "pillow (==11.1.0)",
+    "pulp (==2.9.0)",
+    "scipy (==1.15.1)",
+    "shapely (==2.0.6)",
+    "uvicorn (==0.34.0)",
+    "opencv-python (>=4.11.0.86,<5.0.0.0)",
+    "ipykernel (>=6.29.5,<7.0.0)",
+    "ipywidgets-bokeh (>=1.6.0,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
