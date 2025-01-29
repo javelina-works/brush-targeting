@@ -13,6 +13,20 @@ from .targets_stage import AcquireTargetsWidget
 from .stage_audit import MapView
 
 
+class StageSelect(param.Parameterized):
+    def __init__(self, **params):
+        super().__init__(**params)
+
+    @param.output(
+    )
+    def output(self):
+        return
+
+    def panel(self):
+        select_row = pn.Row("Select or create a project")
+        return select_row
+
+
 class StageUpload(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
@@ -190,3 +204,15 @@ class StageAudit(param.Parameterized):
         )
         return layout
     
+class StageRouting(param.Parameterized):
+    def __init__(self, **params):
+        super().__init__(**params)
+
+    @param.output(
+    )
+    def output(self):
+        return
+
+    def panel(self):
+        select_row = pn.Row("Find routes to address all targets")
+        return select_row

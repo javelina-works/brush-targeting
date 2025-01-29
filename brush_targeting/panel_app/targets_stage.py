@@ -2,8 +2,8 @@ import geopandas as gpd
 import param
 import panel as pn
 from PIL import Image
-from ..plant_search.image_preprocess import identify_targets, assign_target_metadata
-from ..plant_search.load_image import load_image
+from brush_targeting.plant_search.image_preprocess import identify_targets, assign_target_metadata
+from brush_targeting.plant_search.load_image import load_image
 
 class AcquireTargetsWidget(param.Parameterized):
     binary_mask = param.Parameter(allow_None=False, doc="2D np.array of binary mask")

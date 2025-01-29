@@ -4,6 +4,16 @@ A local-first app for identifying woody brush from an orthophoto and planning ef
 Here's a section you can include in your documentation to explain how to download dependencies using Poetry:
 
 
+## Running the Apps
+
+Just the Panel Server:
+```bash
+poetry run panel serve brush_targeting/main.py --dev
+```
+
+
+
+
 ## Installation Instructions
 ### Installing Dependencies with Poetry
 

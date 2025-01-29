@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path.cwd().parent))
 
-from ..plant_search.vegetation_indices import normalize_rgb, calculate_exg
+from plant_search.vegetation_indices import normalize_rgb, calculate_exg
 
 
 
