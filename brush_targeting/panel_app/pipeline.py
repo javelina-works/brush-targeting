@@ -2,14 +2,15 @@ import param
 import panel as pn
 import copy
 
-from panel_app.upload_stage import UploadRegionFiles
-from panel_app.search_stage import *
-from panel_app.search_techniques import (
+
+from .upload_stage import UploadRegionFiles
+from .search_stage import *
+from .search_techniques import (
     VegetationIndex, Smoothing, ContrastEnhancement, MorphologicalRefinement, ManualThresholding
 )
-from panel_app.utils import DownloadGeoJSON
-from panel_app.targets_stage import AcquireTargetsWidget
-from panel_app.stage_audit import MapView
+from .utils import DownloadGeoJSON
+from .targets_stage import AcquireTargetsWidget
+from .stage_audit import MapView
 
 
 class StageUpload(param.Parameterized):

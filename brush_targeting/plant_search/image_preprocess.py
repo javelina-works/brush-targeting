@@ -1,4 +1,4 @@
-from plant_search.vegetation_indices import calculate_exg, normalize_rgb
+from .vegetation_indices import calculate_exg, normalize_rgb
 from skimage.exposure import equalize_adapthist
 from skimage.morphology import opening, closing, disk
 from skimage.filters import threshold_otsu

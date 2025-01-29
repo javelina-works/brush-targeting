@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "AGPL-3.0 License"}
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4"
 dependencies = [
     "geopandas (==1.0.1)",
     "geoviews (==1.14.0)",
@@ -38,3 +38,9 @@ dependencies = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.backend.dependencies]
+fastapi = {extras = ["standard"], version = "^0.115.7"}
+uvicorn = "^0.34.0"
+panel = {extras = ["fastapi"], version = "^1.6.0"}
+
