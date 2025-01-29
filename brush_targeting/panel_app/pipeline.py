@@ -2,7 +2,7 @@ import param
 import panel as pn
 import copy
 
-
+from .stage_select import ProjectManagerWidget
 from .upload_stage import UploadRegionFiles
 from .search_stage import *
 from .search_techniques import (
@@ -16,6 +16,7 @@ from .stage_audit import MapView
 class StageSelect(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
+        self.project_select = ProjectManagerWidget()
 
     @param.output(
     )
@@ -23,7 +24,9 @@ class StageSelect(param.Parameterized):
         return
 
     def panel(self):
-        select_row = pn.Row("Select or create a project")
+        select_row = pn.Row(
+            self.project_select.panel,
+        )
         return select_row
 
 
