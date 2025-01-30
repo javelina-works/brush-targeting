@@ -25,7 +25,7 @@ class StageSelect(param.Parameterized):
 
     def panel(self):
         select_row = pn.Row(
-            self.project_select.panel,
+            self.project_select.panel(), # NOTE: MUST call panel() not panel to reduce flicker
         )
         return select_row
 
