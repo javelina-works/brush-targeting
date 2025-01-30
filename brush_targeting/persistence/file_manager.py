@@ -1,6 +1,8 @@
 import os
 import param
 
+# TODO: may just get rid of this. Seems like better handled in Project, ProjectManager
+
 class FileManager(param.Parameterized):
     media_dir = param.String(default=os.getenv("MEDIA_DIR", "media"))
     projects_dir = param.String(default=None, precedence=-1)

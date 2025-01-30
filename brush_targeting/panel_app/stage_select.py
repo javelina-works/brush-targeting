@@ -1,13 +1,13 @@
 import panel as pn
 import param
-from brush_targeting.persistence.project import ProjectManager
+from brush_targeting.persistence.project import ProjectManager, Project
 
 pn.extension('modal')
 
 class ProjectManagerWidget(ProjectManager):
     """Panel UI widget for managing projects."""
     
-    selected_project = param.String(default="", allow_None=True, doc="Currently selected project")
+    selected_project = param.ClassSelector(class_=Project, allow_None=True, doc="Currently selected project")
     project_name_input = param.String(default="", doc="User input for new project")
     status_message = param.String(default="", doc="Status feedback for the user")
 
@@ -17,8 +17,8 @@ class ProjectManagerWidget(ProjectManager):
         self._initialize_ui()
 
     def _create_project_modal(self):
+        """Modal for creating a new project."""
         self.project_input = pn.widgets.TextInput(name="Name", placeholder="Enter project name")
-        # self.project_description = pn.widgets.TextInput(name="Description (optional)", placeholder="Enter project description")
         
         self.status_pane = pn.pane.Markdown(self.status_message)
         self.confirm_create_button = pn.widgets.Button(name="Create Project", button_type="primary")
@@ -31,11 +31,9 @@ class ProjectManagerWidget(ProjectManager):
             self.status_pane,
             self.project_input,
             self.confirm_create_button,
-
             name="Create Project",
             margin=40
         )
-
 
     def _initialize_ui(self):
         """Constructs the UI elements."""
@@ -44,15 +42,17 @@ class ProjectManagerWidget(ProjectManager):
         )
         self.project_selector.param.watch(self._update_selected_project, "value")
 
-        # Create project interface is in hidden modal
+        # Create project interface is in a hidden modal
         self._create_project_modal()
         self.create_button = self.modal.create_button('toggle', name="➕ New Project")
-        
 
-        
     def _update_selected_project(self, event):
-        """Updates the selected project."""
-        self.selected_project = event.new
+        """Loads and sets the selected project."""
+        project_name = event.new
+        if project_name:
+            self.selected_project = self.load_project(project_name)
+        else:
+            self.selected_project = None
 
     def _handle_create_project(self, event):
         """Handles the creation of a new project."""
@@ -61,9 +61,12 @@ class ProjectManagerWidget(ProjectManager):
             self.status_message = "⚠️ Project name cannot be empty."
         else:
             try:
-                self.create_project(project_name)
+                self.selected_project = self.create_project(project_name)  # Now returns a Project instance
                 self.status_message = f"✅ Project '{project_name}' created successfully!"
                 self._refresh_project_list()
+                # Clear input field and close modal
+                self.project_input.value = ""  
+                self.modal.visible = False 
             except FileExistsError:
                 self.status_message = f"⚠️ Project '{project_name}' already exists."
             except ValueError as e:
@@ -75,15 +78,12 @@ class ProjectManagerWidget(ProjectManager):
         """Refresh the project dropdown after adding a new project."""
         self.project_selector.options = self.list_projects()
 
-    
-
     def panel(self):
-
+        """Builds the UI layout."""
         projects_buttons = pn.FlexBox(
             self.create_button,
             align_items="flex-end",
             justify_content="end"
-            
         )
 
         layout = pn.Column(
@@ -95,5 +95,3 @@ class ProjectManagerWidget(ProjectManager):
             self.modal
         )
         return layout
-
-
