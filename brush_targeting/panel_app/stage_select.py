@@ -24,7 +24,9 @@ class ProjectManagerWidget(ProjectManager):
         self.param.project_list.objects = project_list  # Sync available projects
         self.project_list = project_list[0] if project_list else None  # Ensure default selection
         # print(f"Projects: {self.project_list}, type of {type(self.project_list)}")
+
         self._initialize_ui()
+        
         self.selected_project = self.load_project(self.project_list) if self.project_list else None
         # print(f"Project: {self.selected_project}, type of {type(self.selected_project)}")
         
@@ -56,7 +58,7 @@ class ProjectManagerWidget(ProjectManager):
 
         # Create project interface in a hidden modal
         self._create_project_modal()
-        self.create_button = self.modal.create_button('toggle', name="➕ New Project")
+        self.create_button = self.modal.create_button('show', name="➕ New Project")
         
         self.delete_button = pn.widgets.Button(name="🗑 Delete Project", button_type="danger")
         self.delete_button.on_click(self._handle_delete_project)
@@ -118,7 +120,7 @@ class ProjectManagerWidget(ProjectManager):
                 self.status_message = f"✅ Project '{project_name}' created successfully!"
                 self._refresh_project_list(project_name)
                 self.project_input.value = ""  # Clear input field and close modal
-                self.modal.visible = False
+                self.modal.hide()
             except FileExistsError:
                 self.status_message = f"⚠️ Project '{project_name}' already exists."
             except ValueError as e:
