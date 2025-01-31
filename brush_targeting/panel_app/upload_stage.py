@@ -10,23 +10,6 @@ import rasterio
 # gv.extension('bokeh')
 pn.extension('filedropper')
 
-from bokeh.model import Model
-# import logging
-
-# logging.basicConfig(level=logging.DEBUG)
-
-def log_bokeh_model_ids(obj, name=""):
-    """Logs IDs of Bokeh models for debugging."""
-    if isinstance(obj, Model):
-        print(f"Bokeh Model {name}: {obj}, ID={obj.id}")
-    elif isinstance(obj, (list, tuple)):
-        for i, o in enumerate(obj):
-            log_bokeh_model_ids(o, f"{name}[{i}]")
-    elif isinstance(obj, dict):
-        for k, v in obj.items():
-            log_bokeh_model_ids(v, f"{name}[{k}]")
-    else:
-        print(f"Non-Bokeh object {name}: {obj}")
 
 
 class UploadRegionFiles(param.Parameterized):
@@ -65,18 +48,25 @@ class UploadRegionFiles(param.Parameterized):
 
     def get_region_geotiff(self):
         if self.region_image_upload:
-            image_upload_dict = self.region_image_upload # Stays as dict of files
-            first_file_name = list(image_upload_dict.keys())[0] # Dict of file names:bytes
-            image_stream  = BytesIO(image_upload_dict[first_file_name]) # Bytes to Stream
-
-            # region_image = Image.open(image_stream)  # Stream to PIL image
-            with rasterio.open(image_stream) as src:
-                region_image = {
-                    "data": src.read().transpose(1, 2, 0), # Convert (bands, h, w) to (h, w, bands)
-                    "crs": src.crs,      # Coordinate Reference System
-                    "transform": src.transform  # Affine transform
-                }
-            return region_image
+            try:
+                image_upload_dict = self.region_image_upload # Stays as dict of files
+                first_file_name = list(image_upload_dict.keys())[0] # Dict of file names:bytes
+                print(f"First file name: {first_file_name}")
+                image_stream  = BytesIO(image_upload_dict[first_file_name]) # Bytes to Stream
+                # print(f"Image stream: {image_stream.__sizeof__}")
+                return image_stream
+            except Exception as e:
+                print(f"Error retrieving GeoTIFF: {e}")
+                return None
+            
+            # # region_image = Image.open(image_stream)  # Stream to PIL image
+            # with rasterio.open(image_stream) as src:
+            #     region_image = {
+            #         "data": src.read().transpose(1, 2, 0), # Convert (bands, h, w) to (h, w, bands)
+            #         "crs": src.crs,      # Coordinate Reference System
+            #         "transform": src.transform  # Affine transform
+            #     }
+            # return region_image
         else:
             return None
 

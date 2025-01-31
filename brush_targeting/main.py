@@ -13,9 +13,9 @@ def create_panel_app():
     pipeline.add_stage('Select', StageSelect)
     pipeline.add_stage('Upload', StageUpload)
     pipeline.add_stage('Search', StageSearch)
-    pipeline.add_stage('Targeting', StageAcquireTargets)
-    pipeline.add_stage('Audit', StageAudit)
-    pipeline.add_stage('Routing', StageRouting)
+    # pipeline.add_stage('Targeting', StageAcquireTargets)
+    # pipeline.add_stage('Audit', StageAudit)
+    # pipeline.add_stage('Routing', StageRouting)
 
     return pipeline
 

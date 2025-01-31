@@ -2,6 +2,9 @@ import param
 import panel as pn
 import copy
 
+from brush_targeting.persistence.project import Project
+from brush_targeting.persistence.pipeline_manager import StageArtifactManager
+
 from .stage_select import ProjectManagerWidget
 from .upload_stage import UploadRegionFiles
 from .search_stage import *
@@ -19,9 +22,10 @@ class StageSelect(param.Parameterized):
         self.project_select = ProjectManagerWidget()
 
     @param.output(
+        project=param.ClassSelector(class_=Project, doc="Currently selected project")
     )
     def output(self):
-        return
+        return self.project_select.selected_project
 
     def panel(self):
         select_row = pn.Row(
@@ -31,9 +35,57 @@ class StageSelect(param.Parameterized):
 
 
 class StageUpload(param.Parameterized):
+    project = param.ClassSelector(class_=Project, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
+    artifact_manager = param.Parameter( doc="Manages own artifacts.")
+
     def __init__(self, **params):
         super().__init__(**params)
-        self._add_upload_widgets()
+
+        # Define the Artifact Manager for the Upload Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="upload",
+            input_files=[],  # No required inputs for this stage
+            stage_output_dir_name="inputs",  # Store outputs in `inputs/`
+            output_files=[
+                "region_orthophoto.tif",
+                "region_outline.geojson"
+            ],
+        )
+
+        # Load inputs as needed
+        #   -> If we got here, all inputs are known to exist
+        #   -> No inputs for this stage
+
+        # Check if outputs are already present
+        if self.artifact_manager.has_required_outputs:
+            region_image_handle = self.artifact_manager.get_file_handle("region_orthophoto.tif")
+            region_outline_handle = self.artifact_manager.get_file_handle("region_outline.geojson")
+
+            # if region_image_handle:
+            #     with rasterio.open(region_image_handle) as src:
+            #         region_image = src.read()
+        
+            # if region_outline_handle:
+            #     with open(region_outline_handle, "r") as f:
+            #         region_outline = json.load(f)
+
+            self.upload_widgets = UploadRegionFiles(
+                # region_image_upload = region_image,
+                # region_geojson_upload = region_outline
+            )
+
+        else:
+            self.upload_widgets = UploadRegionFiles() # Add UI Widgets
+
+
+        print("Manager mode activated")
+
+    @param.depends("artifact_manager.has_required_outputs", watch=True)
+    def _update_ready_status(self, event=None):
+        """Updates readiness status based on input and output availability."""
+        self.ready_to_proceed = self.artifact_manager.has_required_outputs
 
     @param.output(
         input_image=param.Parameter,
@@ -41,25 +93,53 @@ class StageUpload(param.Parameterized):
         region_geojson=param.Parameter
     )
     def output(self):
-        region_orthophoto = self.upload_widgets.get_region_geotiff()
-        region_image = np.copy(region_orthophoto['data']) # Numpy array image (h,w,bands)
         
-        region_image_transform = region_orthophoto['transform'] # Transform to be computed
-        input_image_transform_copy = copy.deepcopy(region_image_transform)
+        # region_image = np.copy(region_orthophoto['data']) # Numpy array image (h,w,bands)
+        
+        # region_image_transform = region_orthophoto['transform'] # Transform to be computed
+        # input_image_transform_copy = copy.deepcopy(region_image_transform)
         # region_image = self.upload_widgets.get_region_image()
 
-        region_geojson = self.upload_widgets.get_region_geojson()
+
+        # Save artifacts using the Artifact Manager
+        import json
+        import rasterio
+        import shutil
+
+        try:
+            region_geojson = self.upload_widgets.get_region_geojson()
+            region_outline_handle = self.artifact_manager.get_file_handle("region_outline.geojson")       
+            if region_outline_handle:
+                with open(region_outline_handle, 'w', encoding="utf-8") as f:
+                    json.dump(region_geojson, f, indent=4)
+
+            region_orthophoto = self.upload_widgets.get_region_geotiff()
+            region_image_handle = self.artifact_manager.get_file_handle("region_orthophoto.tif")   
+            if region_image_handle:
+                with open(region_image_handle, 'wb') as out_file:
+                    shutil.copyfileobj(region_orthophoto, out_file)
+        except Exception as e:
+                print(f"Error saving stage artifacts: {e}")
+                return None
+
+        region_image=None
+        input_image_transform_copy=None 
+
         return (
             region_image,
             input_image_transform_copy, 
             region_geojson
         )
-    def _add_upload_widgets(self):
-        self.upload_widgets = UploadRegionFiles()
+    
 
     def panel(self):
-        upload_row = pn.Row(self.upload_widgets.view)
-        return upload_row
+        return pn.Column(
+            pn.indicators.BooleanStatus(
+                value=self.ready_to_proceed,
+                name="Ready to Proceed"
+            ),
+            self.upload_widgets.view(),  # UI for file uploads
+        )
     
 
 
