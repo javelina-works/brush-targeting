@@ -7,21 +7,16 @@ import geoviews as gv
 from PIL import Image
 import rasterio
 
-# gv.extension('bokeh')
+gv.extension('bokeh')
 pn.extension('filedropper')
 
 
 
 class UploadRegionFiles(param.Parameterized):
     # Parameters for tracking uploaded files
-    region_image_upload = param.Parameter(default=None, doc="Uploaded orthophoto geotif of work region")
-    region_geojson_upload = param.Parameter(default=None, doc="Uploaded geoJSON of work region outline")
+    region_image_bytes = param.ClassSelector(class_=BytesIO, default=None, doc="Uploaded orthophoto geotif of work region")
+    region_geojson_dict = param.Dict(default=None, doc="Dict of uploaded geoJSON of work region outline")
     region_image_thumbnail_dims = param.Integer(default=1000, step=250, bounds=(250, 2000), doc="Max dims of uploaded image thumbnail")
-
-    region_image_upload_name = param.Parameter(default=None)
-    region_geojson_upload_name = param.Parameter(default=None)
-
-    # FileDropper widgets
 
     # Accepted filetypes bug for this widget: https://github.com/holoviz/panel/issues/7153
     # accepted_filetypes=["allowed/geojson", ".geojson"],
@@ -31,75 +26,38 @@ class UploadRegionFiles(param.Parameterized):
 
     def __init__(self, **params):
         super().__init__(**params)
-
-        # Link FileDropper outputs to parameters
         self.image_dropper.param.watch(self._update_region_image, "value")
         self.geojson_dropper.param.watch(self._update_region_geojson, "value")
 
-    # Update methods for parameters
     def _update_region_image(self, event):
-            # Upate for all events, including removal of file
-            self.region_image_upload = event.new
-            self.get_region_image() # Update name & contents when possible
-
-    def _update_region_geojson(self, event):
-        self.region_geojson_upload = event.new
-        self.get_region_geojson() # Update name & contents when event triggered
-
-    def get_region_geotiff(self):
-        if self.region_image_upload:
+        if event.new: # only on new events
             try:
-                image_upload_dict = self.region_image_upload # Stays as dict of files
+                image_upload_dict = event.new # Stays as dict of files
                 first_file_name = list(image_upload_dict.keys())[0] # Dict of file names:bytes
-                print(f"First file name: {first_file_name}")
                 image_stream  = BytesIO(image_upload_dict[first_file_name]) # Bytes to Stream
-                # print(f"Image stream: {image_stream.__sizeof__}")
-                return image_stream
+                # image_stream.seek(0)
+                self.region_image_bytes = image_stream
             except Exception as e:
                 print(f"Error retrieving GeoTIFF: {e}")
-                return None
-            
-            # # region_image = Image.open(image_stream)  # Stream to PIL image
-            # with rasterio.open(image_stream) as src:
-            #     region_image = {
-            #         "data": src.read().transpose(1, 2, 0), # Convert (bands, h, w) to (h, w, bands)
-            #         "crs": src.crs,      # Coordinate Reference System
-            #         "transform": src.transform  # Affine transform
-            #     }
-            # return region_image
-        else:
-            return None
+                self.region_image_bytes = None
 
-    def get_region_image(self):
-        if self.region_image_upload:
-            image_upload_dict = self.region_image_upload # Stays as dict of files
-            first_file_name = list(image_upload_dict.keys())[0] # Dict of file names:bytes
-            image_stream  = BytesIO(image_upload_dict[first_file_name]) # Bytes to Stream
-            region_image = Image.open(image_stream)  # Stream to PIL image
-
-            self.region_image_upload_name = first_file_name
-            return region_image
-        else:
-            self.region_image_upload_name = None
-            return None
-
-    def get_region_geojson(self):
-        if self.region_geojson_upload:
-            geojson_upload_dict = self.region_geojson_upload # Dict of files
-            first_file_name = list(geojson_upload_dict.keys())[0] # Dict of file names:bytes
-            file_bytes_string = geojson_upload_dict[first_file_name].decode("utf-8") # Bytes to string
-            region_geojson = json.loads(file_bytes_string)  # String to JSON dict
-            
-            self.region_geojson_upload_name = first_file_name
-            return region_geojson
-        else:
-            self.region_geojson_upload_name = None # Remember to reset when deleted
-            return None
+    def _update_region_geojson(self, event):
+        if event.new:
+            try:
+                geojson_upload_dict = event.new # Dict of files
+                first_file_name = list(geojson_upload_dict.keys())[0] # Dict of file names:bytes
+                file_bytes_string = geojson_upload_dict[first_file_name] # Bytes to string
+                file_bytes_string = geojson_upload_dict[first_file_name].decode("utf-8") # Bytes to string
+                self.region_geojson_dict = json.loads(file_bytes_string)  # String to JSON dict
+            except Exception as e:
+                print(f"Error retrieving GeoJSON: {e}")
+                self.region_geojson_dict = None
 
     def view_image(self):
-        if self.region_image_upload:
+        if self.region_image_bytes:
             try:
-                pil_image = self.get_region_image()
+                # self.region_image_bytes.seek(0)
+                pil_image = Image.open(self.region_image_bytes)  # Stream to PIL image
                 thumb_dim = self.region_image_thumbnail_dims
                 pil_image.thumbnail((thumb_dim, thumb_dim))
                 return pn.pane.Image(pil_image, height=500, width=500)
@@ -108,33 +66,20 @@ class UploadRegionFiles(param.Parameterized):
         else:
             return "No image uploaded."
 
-    # A method to display the GeoJSON region outline
     def view_geojson(self):
-        if self.region_geojson_upload:
+        if self.region_geojson_dict:
             try:
-                region_geojson = self.get_region_geojson()
-                
-                json_pane = pn.pane.JSON(region_geojson, depth=2, name="Uploaded GeoJSON")
-
-                gdf = gpd.GeoDataFrame.from_features(region_geojson["features"])
-                # gdf["geometry"] = gdf["geometry"].simplify(tolerance=0.001)  # Reduce geometry complexity
+                gdf = gpd.GeoDataFrame.from_features(self.region_geojson_dict["features"])
                 gv_geojson = gv.Polygons(gdf, vdims=["name"] if "name" in gdf.columns else None).opts(
-                    fill_alpha=0.5,
-                    line_width=2,
-                    color="blue",
-                    tools=["hover"],
-                    active_tools=["wheel_zoom"],
-                    width=600,
-                    height=400,
+                    fill_alpha=0.5, line_width=2, color="blue",
+                    tools=["hover"], active_tools=["wheel_zoom"],
+                    width=600, height=400,
                     title="Region Outline Visualization"
                 )
-                # view_pane = pn.pane.HoloViews(gv_geojson, height=400, width=600)
-
-                geojson_row = pn.Row( 
-                    json_pane, 
+                return pn.Row( 
+                    pn.pane.JSON(self.region_geojson_dict, depth=2, name="Uploaded GeoJSON"), 
                     pn.pane.HoloViews(gv_geojson, height=400, width=600)
                 )
-                return geojson_row
             except Exception as e:
                 return f"Error processing GeoJSON: {e}"
         else:
@@ -152,9 +97,3 @@ class UploadRegionFiles(param.Parameterized):
                 pn.Column("**Uploaded GeoJSON Outline**", self.view_geojson)
             ),
         )
-
-# # Run the app
-# target_audit_app = UploadRegionFiles()
-# target_audit_app.view().servable()
-
-# target_audit_app.view().show()

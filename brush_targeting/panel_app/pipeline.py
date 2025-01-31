@@ -1,6 +1,10 @@
 import param
 import panel as pn
-import copy
+import json
+import shutil
+import hashlib
+from io import BytesIO
+
 
 from brush_targeting.persistence.project import Project
 from brush_targeting.persistence.pipeline_manager import StageArtifactManager
@@ -21,9 +25,7 @@ class StageSelect(param.Parameterized):
         super().__init__(**params)
         self.project_select = ProjectManagerWidget()
 
-    @param.output(
-        project=param.ClassSelector(class_=Project, doc="Currently selected project")
-    )
+    @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
         return self.project_select.selected_project
 
@@ -60,76 +62,54 @@ class StageUpload(param.Parameterized):
 
         # Check if outputs are already present
         if self.artifact_manager.has_required_outputs:
-            region_image_handle = self.artifact_manager.get_file_handle("region_orthophoto.tif")
-            region_outline_handle = self.artifact_manager.get_file_handle("region_outline.geojson")
+            print("Pre-loading required outputs!")
+            try:
+                preloaded_image = self.artifact_manager.get_file_handle("region_orthophoto.tif")
+                preloaded_geojson = self.artifact_manager.get_file_handle("region_outline.geojson")
 
-            # if region_image_handle:
-            #     with rasterio.open(region_image_handle) as src:
-            #         region_image = src.read()
-        
-            # if region_outline_handle:
-            #     with open(region_outline_handle, "r") as f:
-            #         region_outline = json.load(f)
+                if preloaded_image:
+                    with open(preloaded_image, "rb") as f:
+                        region_image_bytes = BytesIO(f.read())
+                if preloaded_geojson:
+                    with open(preloaded_geojson, "r", encoding="utf-8") as f:
+                        region_geojson_dict = json.load(f)
 
-            self.upload_widgets = UploadRegionFiles(
-                # region_image_upload = region_image,
-                # region_geojson_upload = region_outline
-            )
+                self.upload_widgets = UploadRegionFiles(
+                    region_image_bytes = region_image_bytes,
+                    region_geojson_dict = region_geojson_dict
+                )
+            except Exception as e:
+                print(f"Error preloading stage files: {e}")
+                self.upload_widgets = UploadRegionFiles() # Add UI Widgets
 
         else:
+            print("No files found. Default init.")
             self.upload_widgets = UploadRegionFiles() # Add UI Widgets
-
-
-        print("Manager mode activated")
 
     @param.depends("artifact_manager.has_required_outputs", watch=True)
     def _update_ready_status(self, event=None):
         """Updates readiness status based on input and output availability."""
         self.ready_to_proceed = self.artifact_manager.has_required_outputs
 
-    @param.output(
-        input_image=param.Parameter,
-        input_image_transform=param.Parameter,
-        region_geojson=param.Parameter
-    )
+    @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
-        
-        # region_image = np.copy(region_orthophoto['data']) # Numpy array image (h,w,bands)
-        
-        # region_image_transform = region_orthophoto['transform'] # Transform to be computed
-        # input_image_transform_copy = copy.deepcopy(region_image_transform)
-        # region_image = self.upload_widgets.get_region_image()
-
-
         # Save artifacts using the Artifact Manager
-        import json
-        import rasterio
-        import shutil
-
         try:
-            region_geojson = self.upload_widgets.get_region_geojson()
+            region_geojson_dict = self.upload_widgets.region_geojson_dict
             region_outline_handle = self.artifact_manager.get_file_handle("region_outline.geojson")       
             if region_outline_handle:
                 with open(region_outline_handle, 'w', encoding="utf-8") as f:
-                    json.dump(region_geojson, f, indent=4)
+                    json.dump(region_geojson_dict, f, indent=4)
 
-            region_orthophoto = self.upload_widgets.get_region_geotiff()
+            region_orthophoto_bytes = self.upload_widgets.region_image_bytes
             region_image_handle = self.artifact_manager.get_file_handle("region_orthophoto.tif")   
             if region_image_handle:
                 with open(region_image_handle, 'wb') as out_file:
-                    shutil.copyfileobj(region_orthophoto, out_file)
+                    out_file.write(region_orthophoto_bytes.getbuffer())
         except Exception as e:
                 print(f"Error saving stage artifacts: {e}")
                 return None
-
-        region_image=None
-        input_image_transform_copy=None 
-
-        return (
-            region_image,
-            input_image_transform_copy, 
-            region_geojson
-        )
+        return (self.project)
     
 
     def panel(self):
@@ -144,8 +124,9 @@ class StageUpload(param.Parameterized):
 
 
 class StageSearch(param.Parameterized):
-    input_image = param.Parameter(allow_None=False, doc="Original region orthophoto")
-    input_image_transform=param.Parameter(allow_None=False, doc="Transform to map image np.ndarray to geospatial reference")
+    project = param.ClassSelector(class_=Project, doc="Pipeline's current project")
+    input_image = param.Parameter(allow_None=True, doc="Original region orthophoto")
+    input_image_transform=param.Parameter(allow_None=True, doc="Transform to map image np.ndarray to geospatial reference")
     region_geojson = param.Parameter(default=None, doc="Uploaded geoJSON of work region outline")
 
     def __init__(self, **params):
@@ -154,6 +135,7 @@ class StageSearch(param.Parameterized):
             self.image_array = np.array(self.input_image) # Needs to be numpy array
         else:
             self.image_array = None # Don't pass empty array
+            print("Need an input image!")
             raise ValueError("input_image cannot be None in StageSearch initialization")
         self._add_search_widgets()
 
