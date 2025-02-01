@@ -20,30 +20,39 @@ class StageArtifactManager(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-        # Define input/output directories for this stage
-        self.stage_output_dir = Path(self.project.project_dir) / (self.stage_output_dir_name or f"outputs")
-        self.stage_output_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            # Define input/output directories for this stage
+            self.stage_output_dir = Path(self.project.project_dir) / (self.stage_output_dir_name or f"outputs")
+            self.stage_output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Store full paths for input/output files
-        self.input_files = [Path(self.project.project_dir) / file for file in self.input_files]
-        self.output_files = [self.stage_output_dir / file for file in self.output_files]
+            # Store full paths for input/output files
+            self.input_files = [Path(self.project.project_dir) / file for file in self.input_files]
+            self.output_files = [self.stage_output_dir / file for file in self.output_files]
+        except Exception as e:
+            print(f"Error initializing SAM for stage {self.stage_name}: {e}")
 
         self._validate_inputs_exist() # Check if required inputs exist
         self._update_output_status() # Check output status on init
-
 
     def get_file_handle(self, filename):
         """Return a valid file handle (path) if the file exists and is registered as an input or output."""
         
         # Check if filename is in the known input/output list
-        input_paths = {file.name: file for file in self.input_files}
+        input_paths = {str(Path(self.project.project_dir) / file): Path(self.project.project_dir) / file for file in self.input_files}
         output_paths = {file.name: self.stage_output_dir / file.name for file in self.output_files}
 
+        # print(f"Requested file: {filename}")
+        # print(f"Input paths: {input_paths}")
+        # print(f"Output paths: {output_paths}")
+
+        requested_input_path = str(Path(self.project.project_dir) / filename)
+        requested_output_path = filename  # Plain filename should match output files
+
         # Determine if it's an input or output file
-        if filename in input_paths:
-            path = input_paths[filename]
-        elif filename in output_paths:
-            path = output_paths[filename]
+        if requested_input_path in input_paths:
+            path = input_paths[requested_input_path]
+        elif requested_output_path in output_paths:
+            path = output_paths[requested_output_path]
         else:
             raise ValueError(f"Requested file '{filename}' is not a defined input or output for stage '{self.stage_name}'.")
 
@@ -51,6 +60,7 @@ class StageArtifactManager(param.Parameterized):
         # return path if path.exists() else None
         return path
     
+
 
     def _validate_inputs_exist(self):
         """Raises an error if any required input file is missing."""
@@ -63,50 +73,48 @@ class StageArtifactManager(param.Parameterized):
 
     @param.depends("input_files", watch=True)
     def _update_input_status(self):
-        self.has_required_inputs = all(
-            Path(self.stage_input_dir, f).exists() for f in self.input_files
-        )
+        self.has_required_inputs = all(f.exists() for f in self.input_files)
 
     @param.depends("output_files", watch=True)
     def _update_output_status(self):
         self.has_required_outputs = all(f.exists() for f in self.output_files)
 
-    def save_artifact(self, filename, data):
-        """Save an artifact to the stage's output directory, handling different formats."""
-        path = self.stage_output_dir / filename
-        os.makedirs(path.parent, exist_ok=True)
+    # def save_artifact(self, filename, data):
+    #     """Save an artifact to the stage's output directory, handling different formats."""
+    #     path = self.stage_output_dir / filename
+    #     os.makedirs(path.parent, exist_ok=True)
 
-        if isinstance(data, np.ndarray):
-            np.save(path, data)
-        elif isinstance(data, dict):
-            with open(path, "w") as f:
-                json.dump(data, f)
-        elif isinstance(data, str) or isinstance(data, bytes):
-            mode = "w" if isinstance(data, str) else "wb"
-            with open(path, mode) as f:
-                f.write(data)
-        else:
-            raise ValueError(f"Unsupported data type for {filename}")
+    #     if isinstance(data, np.ndarray):
+    #         np.save(path, data)
+    #     elif isinstance(data, dict):
+    #         with open(path, "w") as f:
+    #             json.dump(data, f)
+    #     elif isinstance(data, str) or isinstance(data, bytes):
+    #         mode = "w" if isinstance(data, str) else "wb"
+    #         with open(path, mode) as f:
+    #             f.write(data)
+    #     else:
+    #         raise ValueError(f"Unsupported data type for {filename}")
 
-        self._update_output_status() # Check output status after saving
+    #     self._update_output_status() # Check output status after saving
 
 
-    def get_artifact(self, filename):
-        """Retrieve an artifact from the stage’s output directory."""
-        path = self.stage_output_dir / filename
-        if not path.exists():
-            return None
+    # def get_artifact(self, filename):
+    #     """Retrieve an artifact from the stage’s output directory."""
+    #     path = self.stage_output_dir / filename
+    #     if not path.exists():
+    #         return None
 
-        if filename.endswith(".npy"):
-            return np.load(path)
-        elif filename.endswith(".json"):
-            with open(path, "r") as f:
-                return json.load(f)
-        elif filename.endswith(".txt"):
-            with open(path, "r") as f:
-                return f.read()
-        else:
-            return path.read_bytes()  # Generic binary file
+    #     if filename.endswith(".npy"):
+    #         return np.load(path)
+    #     elif filename.endswith(".json"):
+    #         with open(path, "r") as f:
+    #             return json.load(f)
+    #     elif filename.endswith(".txt"):
+    #         with open(path, "r") as f:
+    #             return f.read()
+    #     else:
+    #         return path.read_bytes()  # Generic binary file
 
 
 '''

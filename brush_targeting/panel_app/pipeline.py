@@ -1,8 +1,8 @@
 import param
 import panel as pn
 import json
-import shutil
 import hashlib
+import rasterio
 from io import BytesIO
 
 
@@ -109,7 +109,7 @@ class StageUpload(param.Parameterized):
         except Exception as e:
                 print(f"Error saving stage artifacts: {e}")
                 return None
-        return (self.project)
+        return self.project
     
 
     def panel(self):
@@ -124,29 +124,63 @@ class StageUpload(param.Parameterized):
 
 
 class StageSearch(param.Parameterized):
-    project = param.ClassSelector(class_=Project, doc="Pipeline's current project")
-    input_image = param.Parameter(allow_None=True, doc="Original region orthophoto")
-    input_image_transform=param.Parameter(allow_None=True, doc="Transform to map image np.ndarray to geospatial reference")
-    region_geojson = param.Parameter(default=None, doc="Uploaded geoJSON of work region outline")
+    project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
 
     def __init__(self, **params):
         super().__init__(**params)
-        if self.input_image is not None:
-            self.image_array = np.array(self.input_image) # Needs to be numpy array
-        else:
-            self.image_array = None # Don't pass empty array
-            print("Need an input image!")
-            raise ValueError("input_image cannot be None in StageSearch initialization")
+
+        # Define the Artifact Manager for the Search Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="search",
+            input_files=[
+                "inputs/region_orthophoto.tif" # region image for searching
+            ],
+            stage_output_dir_name="search",  # Store outputs in `search/`
+            output_files=[
+                "binary_mask.png" # Store outputs as geo-referenced binary mask
+            ],
+        )
+
+        # Load inputs as needed
+        #   -> If we got here, all inputs are known to exist
+        try:
+            preloaded_image = self.artifact_manager.get_file_handle("inputs/region_orthophoto.tif")
+            if preloaded_image:
+                with rasterio.open(preloaded_image) as src:
+                    image_array = src.read().transpose(1, 2, 0) # Convert (bands, h, w) to (h, w, bands)
+                self.image_array = np.array(image_array) # Needs to be numpy array
+
+        except Exception as e:
+                print(f"Error retrieving stage artifacts: {e}")
+                raise ValueError("Input artifacts cannot be None in StageSearch initialization")
+
+
+
         self._add_search_widgets()
 
-    @param.output(
-        input_image=param.Parameter,
-        input_image_transform=param.Parameter,
-        binary_mask=param.Parameter,
-        region_geojson=param.Parameter
-    )
+    @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
-        return self.input_image, self.input_image_transform, self.target_search.output_image, self.region_geojson
+
+        # Save artifacts using the Artifact Manager
+        print("Trying to save binary mask!")
+        try:
+            search_binary_mask = self.target_search.output_image
+            binary_mask_handle = self.artifact_manager.get_file_handle("binary_mask.png")
+            img = Image.fromarray((search_binary_mask).astype("uint8"))  # Scale 0/1 mask to 0-255
+            img.save(binary_mask_handle, "PNG")
+            
+            # TODO: save geo-referenced version of bin mask too!
+            # if binary_mask_handle:
+            #     with open(binary_mask_handle, 'wb') as out_file:
+            #         out_file.write(search_binary_mask.getbuffer())
+            print("Outputs saved!")
+        except Exception as e:
+                print(f"Error saving stage artifacts: {e}")
+                return None
+
+        return self.project
     
     def _add_search_widgets(self):
         veg_index = VegetationIndex()
@@ -161,12 +195,20 @@ class StageSearch(param.Parameterized):
         )
 
     def panel(self):
-        search_row = pn.Row(self.target_search.view)
-        return search_row
+        return pn.Column(
+            pn.indicators.BooleanStatus(
+                value=self.ready_to_proceed,
+                name="Ready to Proceed"
+            ),
+            self.target_search.view
+        )
     
 
 
 class StageAcquireTargets(param.Parameterized):
+    project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
+
     input_image = param.Parameter(allow_None=False, doc="Original region orthophoto")
     input_image_transform=param.Parameter(allow_None=False, doc="Transform to map image np.ndarray to geospatial reference")
     binary_mask = param.Parameter(default=None, doc="2D np.array of binary mask")
