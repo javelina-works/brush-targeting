@@ -16,11 +16,18 @@ class MapView(param.Parameterized):
     # region_image_path = param.String(doc="Path to the orthophoto image")
     region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
     targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
+    removed_targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
+
 
     def __init__(self, **params):
+        # pn.extension('ipywidgets')
+
         super().__init__(**params)
         self.map = None
-        self.removed_targets_gdf = gpd.GeoDataFrame(columns=self.targets_gdf.columns, geometry='geometry')
+
+        if self.removed_targets_gdf is None: # Copy form of input if not pre-loading
+            self.removed_targets_gdf = gpd.GeoDataFrame(columns=self.targets_gdf.columns, geometry='geometry')
+        
         # self.sample_boxes_gdf = None
         # self.combined_gdf = None
         self.drawn_rectangles = []
@@ -72,13 +79,20 @@ class MapView(param.Parameterized):
         def on_click_target(event, feature, properties, id):
             # Move the clicked point to the removed targets layer
             target_id = properties['target_id']
+            print(f"Clicked a target: {target_id}")
             clicked_point = self.targets_gdf[self.targets_gdf['target_id'] == target_id]
+
+            print(f"GDF Lengths: t{len(self.targets_gdf)}, r{len(self.removed_targets_gdf)}")
+
             # Remove from targets_gdf
             self.targets_gdf = self.targets_gdf[self.targets_gdf['target_id'] != target_id]
             self.targets_layer.geo_dataframe = self.targets_gdf
+
             # Add to removed_targets_gdf
             self.removed_targets_gdf = pd.concat([self.removed_targets_gdf, clicked_point])
             self.removed_targets_layer.geo_dataframe = self.removed_targets_gdf
+            print(f"GDF Lengths: t{len(self.targets_gdf)}, r{len(self.removed_targets_gdf)}")
+
 
         self.targets_layer.on_click(on_click_target)
         self.map.add(self.targets_layer)
@@ -94,6 +108,7 @@ class MapView(param.Parameterized):
             )
         
         def on_click_removed_target(event, feature, properties, id):
+            print("Clicked a removed target")
             target_id = properties['target_id']
             clicked_point = self.removed_targets_gdf[self.removed_targets_gdf['target_id'] == target_id]
 
@@ -107,24 +122,24 @@ class MapView(param.Parameterized):
         self.map.add(self.removed_targets_layer)
 
     def _add_draw_control(self):
-        self.draw_control = GeomanDrawControl()
-        
-        self.draw_control.circlemarker = {}
-        self.draw_control.polygon = {}
-        self.draw_control.polyline = {}
-        self.draw_control.rectangle = {"pathOptions": {"weight": 2, "color": "green", "fillOpacity": 0.1}}
-        
-        self.draw_control.rotate = False
-        self.draw_control.cut = False
-        self.draw_control.edit = False
-        self.draw_control.drag = False # Does not maintain state 
-        self.draw_control.remove = False # Swap GDFs, don't remove
+        self.draw_control = GeomanDrawControl(
+            circlemarker = {},
+            polygon = {},
+            polyline = {},
+            rectangle = {"pathOptions": {"weight": 2, "color": "green", "fillOpacity": 0.1}},
 
+            rotate = False,
+            cut = False,
+            edit = False,
+            drag = False, # Does not maintain state 
+            remove = False, # Swap GDFs, don't remove
+        )
         self.map.add(self.draw_control)
+
 
     def _add_map_controls(self):
         # self.map.add(ZoomControl(position='bottomleft'))
-        self.map.add(FullScreenControl(position='topleft'))
+        self.map.add(FullScreenControl(position="topleft"))
         self.map.add(LayersControl(position="topright"))
         self.map.add(ScaleControl(position="bottomleft"))
 

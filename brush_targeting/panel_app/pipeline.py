@@ -337,8 +337,8 @@ class StageAudit(param.Parameterized):
     ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
 
     # input_image_transform=param.Parameter(doc="Transform to map image np.ndarray to geospatial reference")
-    targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
-    region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
+    # targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
+    # region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
 
     
 
@@ -355,35 +355,60 @@ class StageAudit(param.Parameterized):
             ],
             stage_output_dir_name="target",  # Store outputs in `target/`
             output_files=[
-                "audited_targets.geojson", # Targets as GeoJSON
+                "allowed_targets.geojson", # Targets as GeoJSON
+                "removed_targets.geojson" # Removed targets as GeoJSON
             ],
         )
 
         # Load inputs as needed
         #   -> If we got here, all inputs are known to exist
         try:
-            preloaded_mask = self.artifact_manager.get_file_handle("search/binary_mask.tif")
-            if preloaded_mask:
-                with rasterio.open(preloaded_mask) as src:
-                    binary_mask = src.read(1) # Should be 2D (w x h) np.ndarray 
-                    self.mask_transform = src.transform
-                self.binary_mask = np.array(binary_mask) # Needs to be numpy array
+            region_geojson_handle = self.artifact_manager.get_file_handle("inputs/region_outline.geojson")
+            if region_geojson_handle:
+                with open(region_geojson_handle, "r") as f:
+                    region_outline_geojson = json.load(f)
+
+            targets_geojson_handle = self.artifact_manager.get_file_handle("target/targets.geojson")
+            if targets_geojson_handle:
+                found_targets_gdf = gpd.read_file(targets_geojson_handle)
 
         except Exception as e:
                 print(f"Error retrieving stage artifacts: {e}")
                 raise ValueError("Input artifacts cannot be None in StageSearch initialization")
 
+        # Pre-load stage outputs if available
+        #   -> If we pass here, we have run this stage before
+        self.targets_gdf = None # Attept to pre-load, if avaiable
 
+        if self.artifact_manager.has_required_outputs:
+            try:
+                allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("allowed_targets.geojson")
+                if allowed_targets_geojson_handle:
+                    allowed_targets_gdf = gpd.read_file(allowed_targets_geojson_handle)
 
-        self._add_map()
+                removed_targets_geojson_handle = self.artifact_manager.get_file_handle("removed_targets.geojson")
+                if removed_targets_geojson_handle:
+                    removed_targets_gdf = gpd.read_file(removed_targets_geojson_handle)
+            
+                # If we are pre-loading, pass allowed & removed targets to map
+                self.map_view = MapView(
+                    region_geojson = region_outline_geojson,
+                    targets_gdf = allowed_targets_gdf,
+                    removed_targets_gdf = removed_targets_gdf
+                )
+
+            except Exception as e:
+                print(f"Error preloading stage files: {e}")
+
+        else:
+            # Initialize with auto-generated targets only
+            self.map_view = MapView(
+                region_geojson = region_outline_geojson,
+                targets_gdf = found_targets_gdf
+            )
+
+        # Regardless or pre-load, pass in our download helper widgets
         self._add_download_widgets()
-
-    def _add_map(self):
-        targets_points_gdf = self.targets_gdf[['geometry','target_id']] # remove confusing cols
-        self.map_view = MapView(
-            region_geojson = self.region_geojson,
-            targets_gdf = targets_points_gdf
-        )
 
     def _add_download_widgets(self):
         download_targets = DownloadGeoJSON(
@@ -407,33 +432,64 @@ class StageAudit(param.Parameterized):
             )
         )
 
-    # @param.output(
-    #         targets_gdf=param.Parameter,
-    #         removed_targets_gdf=param.Parameter,
-    # ) # TBD best param type for geoJSON/GDFs
-    # def output(self):
-    #     return self.map_view.targets_gdf, self.map_view.removed_targets_gdf
 
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
+        allowed_targets = self.map_view.targets_gdf
+        removed_targets = self.map_view.removed_targets_gdf
 
+        # Save artifacts using the Artifact Manager
+        try:
+            allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("allowed_targets.geojson")
+            if allowed_targets_geojson_handle and allowed_targets is not None:
+                allowed_targets.to_file(allowed_targets_geojson_handle, driver="GeoJSON")
 
-        return self.project_select.selected_project
+            removed_targets_geojson_handle = self.artifact_manager.get_file_handle("removed_targets.geojson")
+            if removed_targets_geojson_handle and removed_targets is not None:
+                removed_targets.to_file(removed_targets_geojson_handle, driver="GeoJSON")
+
+        except Exception as e:
+                print(f"Error saving stage artifacts: {e}")
+
+        return self.project
         
     def panel(self):
-        map_panel = pn.panel(self.map_view.map)
-        layout = pn.Column(
-            map_panel,
-            self.download_widgets
-        )
-        return layout
+        try:
+            # map_panel = pn.pane.IPyLeaflet(self.map_view.map)
+            # map_panel = pn.pane.IPyWidget(self.map_view.map)
+            map_panel = pn.panel(self.map_view.map) # Seems to be interactive now. Nobody knows why.
+            layout = pn.Column(
+                map_panel,
+                self.download_widgets
+            )
+            return layout
+        except Exception as e:
+            print(f"Error displaying stage: {e}")
     
 
 
 
 class StageRouting(param.Parameterized):
+    project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
+
     def __init__(self, **params):
         super().__init__(**params)
+        
+        # Define the Artifact Manager for the Audit Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="routing",
+            input_files=[
+                "inputs/region_outline.geojson", # OG work region outline
+                "target/targets.geojson" # Auto-discovered targets file
+            ],
+            stage_output_dir_name="routing",  # Store outputs in `target/`
+            output_files=[
+                "allowed_targets.geojson", # Targets as GeoJSON
+                "removed_targets.geojson" # Removed targets as GeoJSON
+            ],
+        )
 
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
