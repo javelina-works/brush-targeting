@@ -1,6 +1,7 @@
 import param
 import panel as pn
 import json
+import geopandas as gpd
 import hashlib
 import rasterio
 from io import BytesIO
@@ -241,15 +242,57 @@ class StageAcquireTargets(param.Parameterized):
     project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
     ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
 
-    input_image = param.Parameter(allow_None=False, doc="Original region orthophoto")
-    input_image_transform=param.Parameter(allow_None=False, doc="Transform to map image np.ndarray to geospatial reference")
-    binary_mask = param.Parameter(default=None, doc="2D np.array of binary mask")
-    region_geojson = param.Parameter(default=None, doc="Uploaded geoJSON of work region outline")
-
-
     def __init__(self, **params):
         super().__init__(**params)
-        self._add_aquire_targets_widgets()
+
+        # Define the Artifact Manager for the Targeting Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="target",
+            input_files=[
+                "inputs/region_orthophoto.tif", # region image for searching
+                "inputs/region_outline.geojson", # OG work region outline
+                "search/binary_mask.tif" # Searched region mask
+            ],
+            stage_output_dir_name="target",  # Store outputs in `target/`
+            output_files=[
+                "targets.geojson", # Targets as GeoJSON
+            ],
+        )
+
+        # Load inputs as needed
+        #   -> If we got here, all inputs are known to exist
+        try:
+            preloaded_mask = self.artifact_manager.get_file_handle("search/binary_mask.tif")
+            if preloaded_mask:
+                with rasterio.open(preloaded_mask) as src:
+                    binary_mask = src.read(1) # Should be 2D (w x h) np.ndarray 
+                    self.mask_transform = src.transform
+                self.binary_mask = np.array(binary_mask) # Needs to be numpy array
+
+        except Exception as e:
+                print(f"Error retrieving stage artifacts: {e}")
+                raise ValueError("Input artifacts cannot be None in StageSearch initialization")
+
+
+        # Pre-load stage outputs if available
+        #   -> If we pass here, we have run this stage before
+        self.targets_gdf = None # Attept to pre-load, if avaiable
+        if self.artifact_manager.has_required_outputs:
+            try:
+                targets_geojson_handle = self.artifact_manager.get_file_handle("targets.geojson")
+                if targets_geojson_handle:
+                    self.targets_gdf = gpd.read_file(targets_geojson_handle)
+            except Exception as e:
+                print(f"Error preloading stage files: {e}")
+
+
+        # Load stage interface widgets
+        self.acquire_targets = AcquireTargetsWidget(
+            binary_mask=self.binary_mask,
+            input_image_transform=self.mask_transform,
+            targets_gdf=self.targets_gdf, # Possibly pre-loaded
+        )
 
         self.download_targets = DownloadGeoJSON(
             source_gdf=self.acquire_targets.targets_gdf,
@@ -258,21 +301,21 @@ class StageAcquireTargets(param.Parameterized):
             name="Download Targets"
         )
 
-    @param.output(
-        targets_gdf=param.Parameter,
-        region_geojson=param.Parameter
-    )
+
+    @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
-        return (
-            self.acquire_targets.targets_gdf,
-            self.region_geojson
-        )
+        # Save artifacts using the Artifact Manager
+        try:
+            found_targets_gdf = self.acquire_targets.targets_gdf
+            
+            targets_geojson_handle = self.artifact_manager.get_file_handle("targets.geojson")
+            if targets_geojson_handle:
+                found_targets_gdf.to_file(targets_geojson_handle, driver="GeoJSON")
+        except Exception as e:
+                print(f"Error saving stage artifacts: {e}")
+
+        return self.project
     
-    def _add_aquire_targets_widgets(self):
-        self.acquire_targets = AcquireTargetsWidget(
-            binary_mask=self.binary_mask,
-            input_image_transform=self.input_image_transform
-        )
 
     def panel(self):
         if self.acquire_targets.targets_gdf is not None:
@@ -290,19 +333,48 @@ class StageAcquireTargets(param.Parameterized):
 
 
 class StageAudit(param.Parameterized):
+    project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
+
     # input_image_transform=param.Parameter(doc="Transform to map image np.ndarray to geospatial reference")
     targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
     region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
 
-    @param.output(
-            targets_gdf=param.Parameter,
-            removed_targets_gdf=param.Parameter,
-    ) # TBD best param type for geoJSON/GDFs
-    def output(self):
-        return self.map_view.targets_gdf, self.map_view.removed_targets_gdf
+    
 
     def __init__(self, **params):
         super().__init__(**params)
+
+        # Define the Artifact Manager for the Audit Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="audit",
+            input_files=[
+                "inputs/region_outline.geojson", # OG work region outline
+                "target/targets.geojson" # Auto-discovered targets file
+            ],
+            stage_output_dir_name="target",  # Store outputs in `target/`
+            output_files=[
+                "audited_targets.geojson", # Targets as GeoJSON
+            ],
+        )
+
+        # Load inputs as needed
+        #   -> If we got here, all inputs are known to exist
+        try:
+            preloaded_mask = self.artifact_manager.get_file_handle("search/binary_mask.tif")
+            if preloaded_mask:
+                with rasterio.open(preloaded_mask) as src:
+                    binary_mask = src.read(1) # Should be 2D (w x h) np.ndarray 
+                    self.mask_transform = src.transform
+                self.binary_mask = np.array(binary_mask) # Needs to be numpy array
+
+        except Exception as e:
+                print(f"Error retrieving stage artifacts: {e}")
+                raise ValueError("Input artifacts cannot be None in StageSearch initialization")
+
+
+
         self._add_map()
         self._add_download_widgets()
 
@@ -334,6 +406,19 @@ class StageAudit(param.Parameterized):
                 width=400
             )
         )
+
+    # @param.output(
+    #         targets_gdf=param.Parameter,
+    #         removed_targets_gdf=param.Parameter,
+    # ) # TBD best param type for geoJSON/GDFs
+    # def output(self):
+    #     return self.map_view.targets_gdf, self.map_view.removed_targets_gdf
+
+    @param.output( project=param.ClassSelector(class_=Project) )
+    def output(self):
+
+
+        return self.project_select.selected_project
         
     def panel(self):
         map_panel = pn.panel(self.map_view.map)
@@ -343,14 +428,16 @@ class StageAudit(param.Parameterized):
         )
         return layout
     
+
+
+
 class StageRouting(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
 
-    @param.output(
-    )
+    @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
-        return
+        return self.project_select.selected_project
 
     def panel(self):
         select_row = pn.Row("Find routes to address all targets")
