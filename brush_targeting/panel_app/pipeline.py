@@ -139,7 +139,8 @@ class StageSearch(param.Parameterized):
             ],
             stage_output_dir_name="search",  # Store outputs in `search/`
             output_files=[
-                "binary_mask.png" # Store outputs as geo-referenced binary mask
+                "binary_mask.png", # Store outputs as simple PNG
+                "binary_mask.tif" # Store outputs as geo-referenced binary mask
             ],
         )
 
@@ -157,32 +158,62 @@ class StageSearch(param.Parameterized):
                 raise ValueError("Input artifacts cannot be None in StageSearch initialization")
 
 
+        # Pre-Load outputs if available
+        if self.artifact_manager.has_required_outputs:
+            try:
+                preloaded_binary_mask = self.artifact_manager.get_file_handle("binary_mask.png")
+                if preloaded_binary_mask:
+                    with open(preloaded_binary_mask, "rb") as f:
+                        binary_mask_bytes = f.read()
+                binary_mask = Image.open(BytesIO(binary_mask_bytes)).convert("L")  # Convert to grayscale
+                output_mask = np.array(binary_mask)  # Convert to NumPy array (h, w)
+                self._add_search_widgets(preloaded_output=output_mask)
 
-        self._add_search_widgets()
+            except Exception as e:
+                print(f"Error preloading stage files: {e}")
+                self._add_search_widgets()
+
+        else:
+            self._add_search_widgets()
+
 
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
 
         # Save artifacts using the Artifact Manager
-        print("Trying to save binary mask!")
         try:
             search_binary_mask = self.target_search.output_image
-            binary_mask_handle = self.artifact_manager.get_file_handle("binary_mask.png")
-            img = Image.fromarray((search_binary_mask).astype("uint8"))  # Scale 0/1 mask to 0-255
-            img.save(binary_mask_handle, "PNG")
             
-            # TODO: save geo-referenced version of bin mask too!
-            # if binary_mask_handle:
-            #     with open(binary_mask_handle, 'wb') as out_file:
-            #         out_file.write(search_binary_mask.getbuffer())
-            print("Outputs saved!")
+            # Binary mask as PNG for easy reading
+            binary_mask_handle = self.artifact_manager.get_file_handle("binary_mask.png")
+            if binary_mask_handle:
+                img = Image.fromarray((search_binary_mask).astype("uint8"))  # Scale 0/1 mask to 0-255
+                img.save(binary_mask_handle, "PNG")
+            
+            # Save geo-referenced mask as well
+            reference_geotiff_handle = self.artifact_manager.get_file_handle("inputs/region_orthophoto.tif")
+            binary_mask_tif_handle = self.artifact_manager.get_file_handle("binary_mask.tif")
+            if binary_mask_tif_handle and reference_geotiff_handle:
+
+                # Open the reference GeoTIFF to copy metadata
+                with rasterio.open(reference_geotiff_handle) as src:
+                    meta = src.meta.copy()  # Copy metadata
+                    meta.update({
+                        "count": 1,  # Convert to single-band
+                        "dtype": search_binary_mask.dtype,  # Use the same dtype as the mask
+                    })
+
+                # Save binary mask with the same geospatial properties
+                with rasterio.open(binary_mask_tif_handle, "w", **meta) as dst:
+                    dst.write(search_binary_mask, 1)  # Write mask to band 1
+
         except Exception as e:
                 print(f"Error saving stage artifacts: {e}")
                 return None
 
         return self.project
     
-    def _add_search_widgets(self):
+    def _add_search_widgets(self, preloaded_output=None):
         veg_index = VegetationIndex()
         smoothing = Smoothing()
         contrast = ContrastEnhancement(enabled=False)
@@ -191,7 +222,8 @@ class StageSearch(param.Parameterized):
         
         self.target_search = TargetSearch(
             input_image=self.image_array,
-            techniques=[veg_index, smoothing, contrast, morphological, thresholding]
+            techniques=[veg_index, smoothing, contrast, morphological, thresholding],
+            output_image=preloaded_output
         )
 
     def panel(self):

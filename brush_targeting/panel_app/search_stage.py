@@ -6,16 +6,15 @@ from PIL import Image
 
 
 class TargetSearch(param.Parameterized):
-    input_image = param.Parameter(default=None, doc="Input orthophoto to search")
+    input_image = param.ClassSelector(class_=np.ndarray, allow_None=False, doc="Input orthophoto to search")
     techniques = param.List(default=[])
     sample_downscaling = param.Integer(default=4, bounds=(1,10), doc="Downscale ratio of image shown in intermediate steps")
-    output_image = param.Parameter(default=None, doc="Final output image after running the pipeline")
+    output_image = param.ClassSelector(class_=np.ndarray, default=None, doc="Final output image after running the pipeline")
 
     def __init__(self, **params):
         super().__init__(**params)
 
         self.sample_image = None
-        self.output_image = None
         self._downsample_image()
         self._setup_reactivity()
         # self._chain_techniques()
@@ -50,11 +49,9 @@ class TargetSearch(param.Parameterized):
         for i, technique in enumerate(self.techniques):
             if i == 0: # First technique takes the main input_image as input
                 technique.param.update(input_image=self.sample_image)
-                # print(f"Linking {technique.__class__.__name__} input_image to TargetSearch input_image.")
                 self.param.watch(lambda event, tech=technique: tech.param.update(input_image=event.new), "input_image")
             else: # Subsequent techniques depend on the output of the previous one
                 prev_technique = self.techniques[i - 1]
-                # print(f"Linking {technique.__class__.__name__} input_image to {prev_technique.__class__.__name__} output_image.")
                 prev_technique.param.watch(
                     lambda event, tech=technique: tech.param.update(input_image=event.new),
                     "output_image"
@@ -84,7 +81,6 @@ class TargetSearch(param.Parameterized):
     def search_targets(self):
         """
         Run the full pipeline and update the progress bar.
-        
         """
         if self.input_image is None:
             return None # no image to process
@@ -105,10 +101,6 @@ class TargetSearch(param.Parameterized):
             
         self.progress_bar.value = self.progress_bar.max
         return output
-    
-        # for technique in self.techniques:
-        #     technique.update_output()
-        # return self.techniques[-1].output_image if self.techniques else None
 
     def _downscale_for_display(self, image, max_width=1000, max_height=1000):
         """Downscale an image for display purposes."""
