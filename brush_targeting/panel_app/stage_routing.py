@@ -71,10 +71,11 @@ class RoutingMap(param.Parameterized):
 
     @param.depends('voronoi_data', watch=True)
     def _update_cells_layer(self):
-        return
-        
+        if self.voronoi_layer is not None:
+            self.map.remove(self.voronoi_layer) # Prevent stacking multiple layers
+        self._add_cells_layer() # Refresh layer, regardless of data
 
-    @param.depends('voronoi_data', watch=True)
+
     def _add_cells_layer(self):
         if self.voronoi_data is None:
             self.voronoi_layer = None # Start with none, update as needed
@@ -148,7 +149,7 @@ class RoutingWidgets(param.Parameterized):
             map_panel = pn.panel(self.routing_map.map) # Seems to be interactive now. Nobody knows why.
             layout = pn.Row(
                 pn.Column(
-                    pn.Card(self.tesselation.view, title="Region Tesselation"),
+                    pn.Card(self.tesselation.view(), title="Region Tesselation"),
                     pn.Card("Placeholder", title="Depot Placement"),
                 ),
                 map_panel,

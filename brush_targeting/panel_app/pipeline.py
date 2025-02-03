@@ -542,7 +542,7 @@ class StageRouting(param.Parameterized):
                 value=self.ready_to_proceed,
                 name="Ready to Proceed"
             ),
-            self.routing_widgets.view()
+            self.routing_widgets.view
         )
     
 

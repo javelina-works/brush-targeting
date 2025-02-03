@@ -7,8 +7,8 @@ from brush_targeting.plant_search.region_partition import centroidal_voronoi_tes
 
 
 class Tesselation(param.Parameterized):
-    target_area_acres = param.Number(default=0.5, doc="How large in acres each cell should approximately be.")
-    max_iterations = param.Integer(default=15, doc="Number of iterations to determine tesselation for work region")
+    target_area_acres = param.Number(default=0.5, step=0.25, doc="How large in acres each cell should approximately be.")
+    max_iterations = param.Integer(default=15, bounds=(3,45), doc="Number of iterations to determine tesselation for work region")
     region_outline_gdf = param.ClassSelector(class_=gpd.GeoDataFrame, doc="Region to tesselate into cells")
     cells_gdf = param.ClassSelector(class_=gpd.GeoDataFrame, default=None, allow_None=True, doc="Region tesselated into cells")
     cells_geojson = param.Dict(default=None, doc="GeoJSON of the region partitioning.")
@@ -37,8 +37,6 @@ class Tesselation(param.Parameterized):
             geojson_dict = json.loads(geojson_str) # Convert JSON string to dictionary
             geojson_dict["crs"] = {"type": "name", "properties": {"name": self.cells_gdf.crs.to_string()}} # Embed CRS information
             self.cells_geojson = geojson_dict
-            
-            print("Tessellation completed.")  # Debugging log
         else:
             print("No valid region_outline_gdf provided.")
 
@@ -56,11 +54,10 @@ class Tesselation(param.Parameterized):
             return cells_gdf
 
 
-
     def view(self):
         return pn.Column(
             self.param.target_area_acres,
             self.param.max_iterations,
-            pn.widgets.Button(name="Tesselate", button_type="primary", on_click=self.perform_tesselation),
-            pn.pane.JSON(self.cells_geojson, depth=2, name="Voronoi cells")
+            pn.widgets.Button(name="Refresh Region Cells", button_type="primary", on_click=self.perform_tesselation),
+            pn.pane.JSON(self.param.cells_geojson, depth=2, name="Voronoi cells")
         )
