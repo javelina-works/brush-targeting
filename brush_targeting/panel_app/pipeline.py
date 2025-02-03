@@ -19,7 +19,7 @@ from .search_techniques import (
 from .utils import DownloadGeoJSON
 from .targets_stage import AcquireTargetsWidget
 from .stage_audit import MapView
-
+from .stage_routing import RoutingMap
 
 class StageSelect(param.Parameterized):
     def __init__(self, **params):
@@ -336,12 +336,6 @@ class StageAudit(param.Parameterized):
     project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
     ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
 
-    # input_image_transform=param.Parameter(doc="Transform to map image np.ndarray to geospatial reference")
-    # targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
-    # region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
-
-    
-
     def __init__(self, **params):
         super().__init__(**params)
 
@@ -482,7 +476,7 @@ class StageRouting(param.Parameterized):
             stage_name="routing",
             input_files=[
                 "inputs/region_outline.geojson", # OG work region outline
-                "target/targets.geojson" # Auto-discovered targets file
+                "target/allowed_targets.geojson" # Audited targets from search
             ],
             stage_output_dir_name="routing",  # Store outputs in `target/`
             output_files=[
@@ -491,10 +485,113 @@ class StageRouting(param.Parameterized):
             ],
         )
 
+        # Load inputs as needed
+        #   -> If we got here, all inputs are known to exist
+        try:
+            region_geojson_handle = self.artifact_manager.get_file_handle("inputs/region_outline.geojson")
+            if region_geojson_handle:
+                with open(region_geojson_handle, "r") as f:
+                    region_outline_geojson = json.load(f)
+
+            allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("target/allowed_targets.geojson")
+            if allowed_targets_geojson_handle:
+                allowed_targets_gdf = gpd.read_file(allowed_targets_geojson_handle)
+
+        except Exception as e:
+                print(f"Error retrieving stage artifacts: {e}")
+                raise ValueError("Input artifacts cannot be None in StageSearch initialization")
+
+
+        self.routing_map = RoutingMap(
+            region_geojson=region_outline_geojson,
+            targets_gdf=allowed_targets_gdf,
+        )
+
+
+        # # Pre-load stage outputs if available
+        # #   -> If we pass here, we have run this stage before
+        # self.targets_gdf = None # Attept to pre-load, if avaiable
+        # if self.artifact_manager.has_required_outputs:
+        #     try:
+        #         allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("allowed_targets.geojson")
+        #         if allowed_targets_geojson_handle:
+        #             allowed_targets_gdf = gpd.read_file(allowed_targets_geojson_handle)
+
+        #     except Exception as e:
+        #         print(f"Error preloading stage files: {e}")
+
+        # else:
+        #     pass
+        #     # Initialize with auto-generated targets only
+        #     # self.map_view = MapView(
+        #     #     region_geojson = region_outline_geojson,
+        #     #     targets_gdf = found_targets_gdf
+        #     # )
+
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
-        return self.project_select.selected_project
+
+        # Save artifacts using the Artifact Manager
+        try:
+            pass
+            # allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("allowed_targets.geojson")
+            # if allowed_targets_geojson_handle and allowed_targets is not None:
+            #     allowed_targets.to_file(allowed_targets_geojson_handle, driver="GeoJSON")
+
+            # removed_targets_geojson_handle = self.artifact_manager.get_file_handle("removed_targets.geojson")
+            # if removed_targets_geojson_handle and removed_targets is not None:
+            #     removed_targets.to_file(removed_targets_geojson_handle, driver="GeoJSON")
+
+        except Exception as e:
+                print(f"Error saving stage artifacts: {e}")
+
+        return self.project
 
     def panel(self):
-        select_row = pn.Row("Find routes to address all targets")
+        try:
+            # map_panel = pn.pane.IPyLeaflet(self.map_view.map)
+            # map_panel = pn.pane.IPyWidget(self.map_view.map)
+            map_panel = pn.panel(self.routing_map.map) # Seems to be interactive now. Nobody knows why.
+            layout = pn.Column(
+                pn.indicators.BooleanStatus(
+                    value=self.ready_to_proceed,
+                    name="Ready to Proceed"
+                ),
+                map_panel,
+            )
+            return layout
+        except Exception as e:
+            print(f"Error displaying stage: {e}")
+    
+
+
+class StageDownload(param.Parameterized):
+    project = param.ClassSelector(class_=Project, allow_None=False, doc="Pipeline's current project")
+    ready_to_proceed = param.Boolean(default=False, doc="Indicates if the stage can proceed")
+
+    def __init__(self, **params):
+        super().__init__(**params)
+        
+        # Define the Artifact Manager for the Audit Stage
+        self.artifact_manager = StageArtifactManager(
+            project=self.project,
+            stage_name="routing",
+            input_files=[
+                "inputs/region_outline.geojson", # OG work region outline
+                "target/allowed_targets.geojson" # Audited targets from search
+            ],
+            stage_output_dir_name="routing",  # Store outputs in `target/`
+            output_files=[
+                "allowed_targets.geojson", # Targets as GeoJSON
+                "removed_targets.geojson" # Removed targets as GeoJSON
+            ],
+        )
+
+
+    @param.output( project=param.ClassSelector(class_=Project) )
+    def output(self):
+        return self.project
+
+    def panel(self):
+        select_row = pn.Row("Download all project artifacts")
         return select_row

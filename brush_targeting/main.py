@@ -2,7 +2,7 @@ import panel as pn
 import param
 from panel_app.pipeline import (
     StageSelect, StageUpload, StageSearch, StageAcquireTargets, 
-    StageAudit, StageRouting
+    StageAudit, StageRouting, StageDownload
 )
 
 
@@ -14,8 +14,9 @@ def create_panel_app():
     # pipeline.add_stage('Upload', StageUpload)
     # pipeline.add_stage('Search', StageSearch)
     # pipeline.add_stage('Targeting', StageAcquireTargets)
-    pipeline.add_stage('Audit', StageAudit)
+    # pipeline.add_stage('Audit', StageAudit)
     pipeline.add_stage('Routing', StageRouting)
+    pipeline.add_stage('Download', StageDownload)
 
     return pipeline
 
