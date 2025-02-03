@@ -12,16 +12,20 @@ import geopandas as gpd
 import json
 from shapely.geometry import shape
 
+from .tesselation import Tesselation
 
 class RoutingMap(param.Parameterized):
     # region_image_path = param.String(doc="Path to the orthophoto image")
     region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
     targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
+    cells_gdf = param.Parameter(default=None, doc="GeoPandas DF of region Voronoi")
+    voronoi_data = param.Dict(default=None, doc="GeoJSON of region voronoi")
 
     def __init__(self, **params):
         super().__init__(**params)
         self.map = None
         self.region_data = None
+
         self._initialize_region_data()
         self._initialize_map()
 
@@ -41,7 +45,8 @@ class RoutingMap(param.Parameterized):
         # self.map.add(self.tile_layer)
 
         self._add_region_outline_layer()
-        self._add_targets_layer()
+        # self._add_targets_layer()
+        self._add_cells_layer()
         self._add_map_controls()
         self._add_draw_control()
 
@@ -64,6 +69,24 @@ class RoutingMap(param.Parameterized):
             )
         self.map.add(self.targets_layer)
 
+    @param.depends('voronoi_data', watch=True)
+    def _update_cells_layer(self):
+        return
+        
+
+    @param.depends('voronoi_data', watch=True)
+    def _add_cells_layer(self):
+        if self.voronoi_data is None:
+            self.voronoi_layer = None # Start with none, update as needed
+            return # Skip this layer
+
+        self.voronoi_layer = GeoJSON(
+            data=self.voronoi_data, 
+            style={'color': 'blue', 'fillColor': 'lightblue', 'opacity': 0.25, 'weight': 1},
+            name="Region cells")
+            # name=self.voronoi_data['name'])
+        self.map.add(self.voronoi_layer)
+
     def _add_map_controls(self):
         # self.map.add(ZoomControl(position='bottomleft'))
         self.map.add(FullScreenControl(position="topleft"))
@@ -84,6 +107,57 @@ class RoutingMap(param.Parameterized):
             remove = False, # Swap GDFs, don't remove
         )
         self.map.add(self.draw_control)
+
+
+
+
+class RoutingWidgets(param.Parameterized):
+    region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
+    region_outline_gdf = param.ClassSelector(class_=gpd.GeoDataFrame, doc="Region to tesselate into cells")
+    targets_gdf = param.Parameter(default=None, doc="GeoPandas DF of potential targets")
+
+    cells_gdf = param.Parameter(default=None, doc="GeoPandas DF of region Voronoi")
+    tesselation = param.ClassSelector(class_=Tesselation, default=None, doc="Handles functions maintaining cell tesselation")
+    routing_map = param.ClassSelector(class_=RoutingMap, doc="Displays the map for determining routes")
+
+    def __init__(self, **params):
+        super().__init__(**params)
+
+        self.routing_map = RoutingMap(
+            region_geojson=self.region_geojson,
+            targets_gdf=self.targets_gdf,
+            # cells_gdf=self.tesselation.cells_gdf,
+        )
+
+        self.tesselation = Tesselation(
+            region_outline_gdf=self.region_outline_gdf
+        )
+        print("Widgets ininitialized")
+
+    
+    @param.depends('tesselation.cells_geojson', watch=True)
+    def _update_voronoi_cells(self):
+        # self.routing_map.param.update(cells_gdf=self.tesselation.cells_gdf)
+        self.routing_map.voronoi_data=self.tesselation.cells_geojson
+        # print(self.routing_map.voronoi_data)
+
+    def view(self):
+        try:
+            # map_panel = pn.pane.IPyLeaflet(self.map_view.map)
+            # map_panel = pn.pane.IPyWidget(self.map_view.map)
+            map_panel = pn.panel(self.routing_map.map) # Seems to be interactive now. Nobody knows why.
+            layout = pn.Row(
+                pn.Column(
+                    pn.Card(self.tesselation.view, title="Region Tesselation"),
+                    pn.Card("Placeholder", title="Depot Placement"),
+                ),
+                map_panel,
+            ) 
+            return layout
+        except Exception as e:
+            print(f"Error displaying stage: {e}")
+
+
 
     
 

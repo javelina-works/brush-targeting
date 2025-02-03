@@ -19,7 +19,9 @@ from .search_techniques import (
 from .utils import DownloadGeoJSON
 from .targets_stage import AcquireTargetsWidget
 from .stage_audit import MapView
-from .stage_routing import RoutingMap
+
+from .stage_routing import RoutingMap, RoutingWidgets
+from .tesselation import Tesselation
 
 class StageSelect(param.Parameterized):
     def __init__(self, **params):
@@ -470,6 +472,8 @@ class StageRouting(param.Parameterized):
     def __init__(self, **params):
         super().__init__(**params)
         
+        print("Begin routing stage.")
+
         # Define the Artifact Manager for the Audit Stage
         self.artifact_manager = StageArtifactManager(
             project=self.project,
@@ -484,6 +488,7 @@ class StageRouting(param.Parameterized):
                 "removed_targets.geojson" # Removed targets as GeoJSON
             ],
         )
+        print("SAM initialized.")
 
         # Load inputs as needed
         #   -> If we got here, all inputs are known to exist
@@ -492,6 +497,7 @@ class StageRouting(param.Parameterized):
             if region_geojson_handle:
                 with open(region_geojson_handle, "r") as f:
                     region_outline_geojson = json.load(f)
+                region_outline_gdf = gpd.read_file(region_geojson_handle)
 
             allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("target/allowed_targets.geojson")
             if allowed_targets_geojson_handle:
@@ -502,31 +508,13 @@ class StageRouting(param.Parameterized):
                 raise ValueError("Input artifacts cannot be None in StageSearch initialization")
 
 
-        self.routing_map = RoutingMap(
+        self.routing_widgets = RoutingWidgets(
             region_geojson=region_outline_geojson,
+            region_outline_gdf=region_outline_gdf,
             targets_gdf=allowed_targets_gdf,
+        #     cells_gdf=self.tesselation.cells_gdf,
         )
-
-
-        # # Pre-load stage outputs if available
-        # #   -> If we pass here, we have run this stage before
-        # self.targets_gdf = None # Attept to pre-load, if avaiable
-        # if self.artifact_manager.has_required_outputs:
-        #     try:
-        #         allowed_targets_geojson_handle = self.artifact_manager.get_file_handle("allowed_targets.geojson")
-        #         if allowed_targets_geojson_handle:
-        #             allowed_targets_gdf = gpd.read_file(allowed_targets_geojson_handle)
-
-        #     except Exception as e:
-        #         print(f"Error preloading stage files: {e}")
-
-        # else:
-        #     pass
-        #     # Initialize with auto-generated targets only
-        #     # self.map_view = MapView(
-        #     #     region_geojson = region_outline_geojson,
-        #     #     targets_gdf = found_targets_gdf
-        #     # )
+        print("Stage init completed.")
 
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
@@ -548,20 +536,14 @@ class StageRouting(param.Parameterized):
         return self.project
 
     def panel(self):
-        try:
-            # map_panel = pn.pane.IPyLeaflet(self.map_view.map)
-            # map_panel = pn.pane.IPyWidget(self.map_view.map)
-            map_panel = pn.panel(self.routing_map.map) # Seems to be interactive now. Nobody knows why.
-            layout = pn.Column(
-                pn.indicators.BooleanStatus(
-                    value=self.ready_to_proceed,
-                    name="Ready to Proceed"
-                ),
-                map_panel,
-            )
-            return layout
-        except Exception as e:
-            print(f"Error displaying stage: {e}")
+            
+        return pn.Column(
+            pn.indicators.BooleanStatus(
+                value=self.ready_to_proceed,
+                name="Ready to Proceed"
+            ),
+            self.routing_widgets.view()
+        )
     
 
 

@@ -117,6 +117,10 @@ def centroidal_voronoi_tessellation(region_polygon, num_points,
         multipoint = MultiPoint(points)
         voronoi_result = voronoi_diagram(multipoint, envelope=region_polygon, edges=False)
 
+        # Check if Voronoi diagram has valid geometries
+        if not voronoi_result.geoms:
+            raise ValueError("Voronoi tessellation did not produce any valid polygons.")
+
         # Compute centroids of Voronoi polygons
         new_points = []
         for poly in voronoi_result.geoms:
@@ -124,6 +128,11 @@ def centroidal_voronoi_tessellation(region_polygon, num_points,
             if clipped_poly.is_valid and not clipped_poly.is_empty:
                 new_points.append(clipped_poly.centroid)
         
+        # Stop if no valid centroids were found
+        if not new_points:
+            print("Warning: No valid centroids found in Voronoi tessellation. Stopping iterations.")
+            break
+
         # Check for convergence (small adjustments)
         max_shift = max(point.distance(new_point) for point, new_point in zip(points, new_points))
         points = new_points  # Update points for next iteration
