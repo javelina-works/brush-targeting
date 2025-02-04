@@ -68,6 +68,7 @@ def find_depots(depot_radius: float, cell_gdf: gpd.GeoDataFrame, region_polygon:
         {"geometry": potential_depots[i], "depot_radius": depot_radius, "depot_id": f"depot_{i}"}
         for i, var in enumerate(depot_vars) if var.varValue == 1
     ]
+    print(selected_depots)
     depots_gdf = gpd.GeoDataFrame(selected_depots, crs=cell_gdf.crs)
 
     return depots_gdf
