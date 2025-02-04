@@ -7,8 +7,8 @@ import geoviews as gv
 from PIL import Image
 import rasterio
 
-gv.extension('bokeh')
-pn.extension('filedropper')
+# gv.extension('bokeh')
+# pn.extension('filedropper')
 
 
 

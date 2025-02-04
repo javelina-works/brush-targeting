@@ -5,7 +5,7 @@ import os
 import datetime
 from brush_targeting.persistence.project import ProjectManager, Project
 
-pn.extension('modal')
+# pn.extension('modal')
 
 class ProjectManagerWidget(ProjectManager):
     """Panel UI widget for managing projects."""
@@ -17,7 +17,7 @@ class ProjectManagerWidget(ProjectManager):
     status_message = param.String(default="", doc="Status feedback for the user")
 
     def __init__(self, **params):
-        pn.extension('modal')
+        # pn.extension('modal')
         super().__init__(**params)
 
         project_list = self.list_projects() or []

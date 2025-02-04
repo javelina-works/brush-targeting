@@ -392,6 +392,7 @@ class StageAudit(param.Parameterized):
                     targets_gdf = allowed_targets_gdf,
                     removed_targets_gdf = removed_targets_gdf
                 )
+                self.map_view._initialize_map()
 
             except Exception as e:
                 print(f"Error preloading stage files: {e}")
@@ -453,9 +454,10 @@ class StageAudit(param.Parameterized):
         try:
             # map_panel = pn.pane.IPyLeaflet(self.map_view.map)
             # map_panel = pn.pane.IPyWidget(self.map_view.map)
-            map_panel = pn.panel(self.map_view.map) # Seems to be interactive now. Nobody knows why.
+            # map_panel = pn.panel(self.map_view.map) # Seems to be interactive now. Nobody knows why.
             layout = pn.Column(
-                map_panel,
+                # self.map_view.view(),
+                pn.panel(self.map_view.map),
                 self.download_widgets
             )
             return layout
@@ -488,7 +490,6 @@ class StageRouting(param.Parameterized):
                 "removed_targets.geojson" # Removed targets as GeoJSON
             ],
         )
-        print("SAM initialized.")
 
         # Load inputs as needed
         #   -> If we got here, all inputs are known to exist
@@ -514,7 +515,6 @@ class StageRouting(param.Parameterized):
             targets_gdf=allowed_targets_gdf,
         #     cells_gdf=self.tesselation.cells_gdf,
         )
-        print("Stage init completed.")
 
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):

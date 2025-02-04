@@ -125,7 +125,7 @@ class RoutingMap(param.Parameterized):
 
     def _add_draw_control(self):
         self.draw_control = GeomanDrawControl(
-            circlemarker = {"pathOptions": {"weight": 2, "color": "green", "fillOpacity": 0.1}},
+            circlemarker = {"pathOptions": {"weight": 2, "color": "green", "fillOpacity": 0.1}, "snappable": False, },
             polygon = {},
             polyline = {},
             rectangle = {},
@@ -157,7 +157,6 @@ class RoutingWidgets(param.Parameterized):
         self.routing_map = RoutingMap(
             region_geojson=self.region_geojson,
             targets_gdf=self.targets_gdf,
-            # cells_gdf=self.tesselation.cells_gdf,
         )
 
         # Must init before Tesselation or callback will cause error
@@ -168,8 +167,6 @@ class RoutingWidgets(param.Parameterized):
         self.tesselation = Tesselation(
             region_outline_gdf=self.region_outline_gdf
         )
-        print("Routing widgets init.")
-
     
     @param.depends('tesselation.cells_gdf', watch=True)
     def _update_cells_gdf(self):
@@ -177,9 +174,7 @@ class RoutingWidgets(param.Parameterized):
 
     @param.depends('tesselation.cells_geojson', watch=True)
     def _update_voronoi_cells(self):
-        # self.routing_map.param.update(cells_gdf=self.tesselation.cells_gdf)
         self.routing_map.voronoi_data=self.tesselation.cells_geojson
-        # print(self.routing_map.voronoi_data)
 
     @param.depends('find_depots.depots_gdf', watch=True)
     def _update_depot_placements(self):
@@ -194,7 +189,7 @@ class RoutingWidgets(param.Parameterized):
             map_panel = pn.panel(self.routing_map.map) # Seems to be interactive now. Nobody knows why.
             layout = pn.Row(
                 pn.Column(
-                    pn.Card(self.tesselation.view(), title="Region Tesselation"),
+                    pn.Card(self.tesselation.view(), title="Region Tesselation", collapsed=False, ),
                     pn.Card(self.find_depots.view(), title="Depot Placement"),
                 ),
                 map_panel,

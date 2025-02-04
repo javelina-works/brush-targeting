@@ -11,7 +11,11 @@ Just the Panel Server:
 poetry run panel serve brush_targeting/main.py --dev
 ```
 
+or 
 
+```bash
+poetry run panel serve brush_targeting/main.py --dev --admin
+```
 
 
 ## Installation Instructions
