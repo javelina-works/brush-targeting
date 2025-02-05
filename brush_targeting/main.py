@@ -5,6 +5,9 @@ from panel_app.pipeline import (
     StageSelect, StageUpload, StageSearch, StageAcquireTargets, 
     StageAudit, StageRouting, StageDownload
 )
+from brush_targeting.persistence.project import ProjectManager, Project
+
+
 import logging
 import sys
 
@@ -15,8 +18,8 @@ import sys
 # pn.extension('filedropper')
 # pn.extension('ipywidgets')
 pn.extension('modal')
+pn.extension()
 
-# pn.extension()
 
 
 FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
@@ -38,13 +41,13 @@ def get_logger(name, format_=FORMAT, level=logging.INFO):
     logger.info("Logger successfully configured")
     return logger
 
-get_logger(name="bokeh")
-get_logger(name="panel")
-logger = get_logger(name="app")
+# get_logger(name="bokeh", level=logging.DEBUG)
+# get_logger(name="panel", level=logging.DEBUG)
+# logger = get_logger(name="app", level=logging.DEBUG)
 
 def create_panel_app():
 
-    pipeline = pn.pipeline.Pipeline(debug=True)
+    pipeline = pn.pipeline.Pipeline()
 
     pipeline.add_stage('Select', StageSelect)
     # pipeline.add_stage('Upload', StageUpload)
@@ -56,10 +59,20 @@ def create_panel_app():
 
     return pipeline
 
+def serve_panel_stage():
+    pm = ProjectManager()
+    get_project = pm.load_project('test1')
+    stage = StageAudit(project=get_project)
 
-pipeline = create_panel_app()
-pipeline.servable()
+    return stage
+
+# pipeline = create_panel_app()
+# pipeline.servable()
+
+audit = serve_panel_stage()
+audit.panel().servable()
 
 if __name__ == "__main__":
-    pipeline.show() # Only when running with python
+    print("Running as python script")
+    # pipeline.show() # Only when running with python
     # pn.serve(pipeline)

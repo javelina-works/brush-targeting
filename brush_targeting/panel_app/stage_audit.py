@@ -12,6 +12,8 @@ import geopandas as gpd
 import json
 from shapely.geometry import shape
 
+pn.extension()
+
 class MapView(param.Parameterized):
     # region_image_path = param.String(doc="Path to the orthophoto image")
     region_geojson = param.Dict(allow_None=False, doc="Open GeoJSON file defining the work region outline")
@@ -35,26 +37,30 @@ class MapView(param.Parameterized):
             # self.param.watch(self.param_watcher, list(self.param))
 
             self.map = None
+            # self.targets_layer = None
+            # self.removed_targets_layer = None
+
+            # removed = self.removed_targets_gdf.copy()
+            # self.removed_targets_gdf = removed
             # self.removed_targets_gdf = gpd.GeoDataFrame(columns=self.targets_gdf.columns, geometry='geometry')
 
             if self.targets_gdf is None:
                 self.targets_gdf = gpd.GeoDataFrame(columns=['target_id', 'geometry'], geometry='geometry')
             
             if self.removed_targets_gdf is None: # Copy form of input if not pre-loading
+                print("Setting removed targets to default!")
                 self.removed_targets_gdf = gpd.GeoDataFrame(columns=self.targets_gdf.columns, geometry='geometry')
             
-            # self.sample_boxes_gdf = None
-            # self.combined_gdf = None
             self.drawn_rectangles = []
             self.region_data = None
             self._initialize_region_data()
             self._initialize_map()
-        except Exception as e:
-            print(f"Error initializing MapView: {e}")
 
-        import time
-        time.sleep(1)
-        
+            print(f"Adding targets_layer, ID: {id(self.targets_layer)}")
+            print(f"Adding removed_targets_layer, ID: {id(self.removed_targets_layer)}")
+
+        except Exception as e:
+            print(f"Error initializing MapView: {e}")  
 
     def _initialize_region_data(self):
         self.region_data = self.region_geojson
@@ -78,6 +84,7 @@ class MapView(param.Parameterized):
         self._add_map_controls()
         self._add_draw_control()
         self._add_mass_remove_button()
+        print("MapView is fully initialized")
 
         # self.map.on_interaction(self._on_map_click)
 
@@ -111,7 +118,6 @@ class MapView(param.Parameterized):
         self.map.add(self.targets_layer)
         print(f"Added new target at {lat}, {lon}")
 
-
     def _add_region_outline_layer(self):
         region_layer = GeoJSON(
             data=self.region_data, 
@@ -134,13 +140,14 @@ class MapView(param.Parameterized):
     #         self.removed_targets_layer.geo_dataframe = self.removed_targets_gdf
 
     def _add_targets_layer(self):
+        data = self.targets_gdf
         self.targets_layer = GeoData(
-            geo_dataframe=self.targets_gdf,
+            geo_dataframe=data,
             style={'color': 'black', 'radius':6, 'fillColor': 'blue', 'opacity':0.5, 'weight':1, 'fillOpacity':0.3},
             hover_style={'fillColor': 'blue' , 'fillOpacity': 0.2},
             point_style={'radius': 3, 'color': 'red', 'fillOpacity': 0.8, 'fillColor': 'blue', 'weight': 3},
-            name="Identified targets"
-            )
+            name="Identified targets",
+        )
         
         def on_click_target(event, feature, properties, id):
             # Move the clicked point to the removed targets layer
@@ -177,7 +184,7 @@ class MapView(param.Parameterized):
             style={'color': 'black', 'radius':6, 'fillColor': 'red', 'opacity':0.5, 'weight':1, 'fillOpacity':0.3},
             hover_style={'fillColor': 'red' , 'fillOpacity': 0.2},
             point_style={'radius': 3, 'color': 'red', 'fillOpacity': 0.8, 'fillColor': 'blue', 'weight': 3},
-            name="Removed targets"
+            name="Removed targets",
             )
         
         def on_click_removed_target(event, feature, properties, id):
@@ -222,7 +229,6 @@ class MapView(param.Parameterized):
         self.draw_control.remove = False # Swap GDFs, don't remove
 
         self.map.add(self.draw_control)
-
 
     def _add_map_controls(self):
         # self.map.add(ZoomControl(position='bottomleft'))
@@ -270,8 +276,8 @@ class MapView(param.Parameterized):
         print("triggering map re-render")
 
         # map_panel = self.map
-        # map_panel = pn.panel(self.map)
-        map_panel = pn.panel(self.param.map)
+        map_panel = pn.panel(self.map)
+        # map_panel = pn.panel(self.param.map)
         # self._map_panel = pn.pane.IPyWidget(self.map, width=800, height=600)
         return map_panel
 
@@ -280,7 +286,9 @@ class MapView(param.Parameterized):
         map_section = self._view_map
         audit_panel = pn.Column(
             # self._view_map,
-            map_section,
+            # self.map,
+            pn.panel(self.map),
+            # map_section,
         )
         return audit_panel
         # return audit_panel.servable()

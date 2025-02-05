@@ -1,8 +1,8 @@
-from ipyleaflet import (
-    Map, GeoJSON, TileLayer, GeoData, 
-    WidgetControl, LayersControl, ScaleControl, 
-    GeomanDrawControl, FullScreenControl, ZoomControl
-)
+# from ipyleaflet import (
+#     Map, GeoJSON, TileLayer, GeoData, 
+#     WidgetControl, LayersControl, ScaleControl, 
+#     GeomanDrawControl, FullScreenControl, ZoomControl
+# )
 from panel.widgets import Button
 import ipywidgets
 import param

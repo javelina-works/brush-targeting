@@ -386,22 +386,29 @@ class StageAudit(param.Parameterized):
                 if removed_targets_geojson_handle:
                     removed_targets_gdf = gpd.read_file(removed_targets_geojson_handle)
             
+                # # print(f"Allowed: {allowed_targets_gdf.columns}")
+                # print(f"Num Allowed: {len(allowed_targets_gdf)}")
+                # print(f"Type: {type(allowed_targets_gdf)}")
+                # # print(f"Removed: {removed_targets_gdf.columns}")
+                # print(f"Num Removed: {len(removed_targets_gdf)}")
+                # print(f"Type: {type(removed_targets_gdf)}")
+
                 # If we are pre-loading, pass allowed & removed targets to map
                 self.map_view = MapView(
                     region_geojson = region_outline_geojson,
                     targets_gdf = allowed_targets_gdf,
                     removed_targets_gdf = removed_targets_gdf
                 )
-                self.map_view._initialize_map()
 
             except Exception as e:
                 print(f"Error preloading stage files: {e}")
 
         else:
             # Initialize with auto-generated targets only
+            print("No audit results to pre-load")
             self.map_view = MapView(
                 region_geojson = region_outline_geojson,
-                targets_gdf = found_targets_gdf
+                targets_gdf = found_targets_gdf,
             )
 
         # Regardless or pre-load, pass in our download helper widgets
@@ -429,7 +436,6 @@ class StageAudit(param.Parameterized):
             )
         )
 
-
     @param.output( project=param.ClassSelector(class_=Project) )
     def output(self):
         allowed_targets = self.map_view.targets_gdf
@@ -456,8 +462,8 @@ class StageAudit(param.Parameterized):
             # map_panel = pn.pane.IPyWidget(self.map_view.map)
             # map_panel = pn.panel(self.map_view.map) # Seems to be interactive now. Nobody knows why.
             layout = pn.Column(
-                # self.map_view.view(),
-                pn.panel(self.map_view.map),
+                self.map_view.view(),
+                # pn.panel(self.map_view.map),
                 self.download_widgets
             )
             return layout
