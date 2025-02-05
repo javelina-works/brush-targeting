@@ -17,6 +17,40 @@ or
 poetry run panel serve brush_targeting/main.py --dev --admin
 ```
 
+/app
+│── main.py               # FastAPI entry point
+│── panel_app.py          # Panel UI served within FastAPI
+│── routers/              # FastAPI API endpoints
+│   ├── project.py        # CRUD operations for Projects
+│   ├── processing.py     # Routes to trigger computations
+│   ├── map.py            # Routes for map-related data
+│── models/               # Data models & schemas
+│   ├── project.py        # Project model
+│── services/             # Core logic (not tied to FastAPI)
+│   ├── project_manager.py  # Handles project creation & file storage
+│   ├── processing.py       # Image & geospatial computations
+│   ├── optimization.py     # Optimization algorithms
+│── static/               # Future: Frontend assets (if moving to JS)
+│── requirements.txt      # Dependencies
+│── Dockerfile            # Container setup
+
+
+/app                     # ✅ New main package
+│── /models              # ✅ Data models (Pydantic, DB schemas)
+│   ├── project.py       # ✅ Project schema & model
+│   ├── user.py          # ✅ (If needed) User authentication schema
+│   ├── processing.py    # ✅ Data models for processing tasks
+│── /routes              # ✅ FastAPI route definitions
+│── /services            # ✅ Core business logic (processing, optimization)
+│── /panel_ui            # ✅ Panel application (UI components)
+│── /persistence         # ✅ File management & project persistence
+│── /macro_planning      # ✅ Drone path optimization
+│── /plant_search        # ✅ Image analysis & feature detection
+│── main.py              # ✅ FastAPI entry point
+│── panel_app.py         # ✅ Panel UI served in FastAPI
+│── __init__.py          # ✅ Marks this as a package
+
+
 
 ## Installation Instructions
 ### Installing Dependencies with Poetry
@@ -73,3 +107,9 @@ To set up your environment and install the dependencies for this project, follow
 
 ---
  
+## Running The App
+Run the app via the FastAPI server with the following command:
+
+```bash
+poetry run uvicorn brush_targeting.main:app --reload
+```
