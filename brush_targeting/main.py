@@ -7,7 +7,9 @@ from brush_targeting.routes import (
     health, files,
     # project, processing, map
 )
-from brush_targeting.panel_ui.panel_app import create_panel_app
+from brush_targeting.panel_ui.panel_app import get_projects, get_processing, get_maps
+
+
 
 # Initialize FastAPI app
 app = FastAPI(title="Brush Targeting App", version="1.0")
@@ -34,10 +36,51 @@ app.include_router(files.router) #
 async def read_root():
     return {"Hello": "World"}
 
-add_applications({
-    "/app": create_panel_app,
-    # "/widget": panel.create_panel_widget,
-}, app=app)
+# @add_application('/panel', app=app, title='My Panel App', admin=True)
+# def create_panel_app():
+#     slider = pn.widgets.IntSlider(name='Slider', start=0, end=10, value=3)
+#     return slider.rx() * '⭐'
+
+bokeh_fast_api = add_applications({
+        "/projects": get_projects,
+        "/processing": get_processing,
+        "/map": get_maps,
+    }, 
+    app=app,
+    location=True,
+    liveness=False, # No liveness handler
+    admin=False, # enable admin panel
+    session_history=100, # How much history to accumulate
+    
+    check_unused_sessions_milliseconds=1000,
+    unused_session_lifetime_milliseconds=10,
+)
+
+
+import json
+from fastapi.encoders import jsonable_encoder
+
+@app.get("/huh")
+async def read_root():
+    apps = bokeh_fast_api._applications
+    results = {}
+
+    for slug, app in apps.items():
+        
+        # Convert Panel app attributes to a readable format
+        app_attrs = {k: str(v) for k, v in app.__dict__.items()}
+
+        # Bokeh Server Application inside the Panel Application
+        application = app._application
+        app_server_attrs = {k: str(v) for k, v in application.__dict__.items()}
+
+        results[slug] = {
+            "panel_app_attrs": app_attrs,
+            "bokeh_app_attrs": app_server_attrs,
+        }
+
+    return jsonable_encoder(results)  # Ensures FastAPI can return it as JSON
+    
 
 # Run the app if executed directly
 if __name__ == "__main__":
@@ -117,11 +160,11 @@ if __name__ == "__main__":
 
 #     return stage
 
-# # pipeline = create_panel_app()
-# # pipeline.servable()
+# pipeline = create_panel_app()
+# pipeline.servable()
 
-# audit = serve_panel_stage()
-# audit.panel().servable()
+# # audit = serve_panel_stage()
+# # audit.panel().servable()
 
 # if __name__ == "__main__":
 #     print("Running as python script")
