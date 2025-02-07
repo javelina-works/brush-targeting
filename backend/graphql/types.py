@@ -1,6 +1,13 @@
 import strawberry
 from typing import List, Optional, Dict
-from backend.models.pipeline import ProcessingStage
+from backend.models.processing import (
+    ParameterModel,
+)
+from backend.models.pipeline import (
+    ProcessingStage
+)
+
+@strawberry.type
 
 @strawberry.type
 class Project:

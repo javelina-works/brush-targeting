@@ -9,14 +9,14 @@ router = APIRouter()
 
 # [CREATE] a job linked to a location
 @router.post("/jobs/", response_model=Job)
-def create_job(job: JobCreate):
+def create_job(new_job: JobCreate):
     data = load_data()
 
     # Validate location exists
-    if not any(loc["id"] == job.location_id for loc in data["locations"]):
+    if not any(loc["id"] == new_job.location_id for loc in data["locations"]):
         raise HTTPException(status_code=404, detail="Location not found")
 
-    job = Job(id=str(uuid.uuid4()), location_id=job.location_id, name=job.name)
+    job = Job(id=str(uuid.uuid4()), location_id=new_job.location_id, name=new_job.name)
     data["jobs"].append(job.model_dump())
     save_data(data)
 

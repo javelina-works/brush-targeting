@@ -7,8 +7,9 @@ BASE_DIR = "backend/media"
 # Directory where location folders will be stored
 LOCATIONS_DIR = os.path.join(BASE_DIR, "locations")
 
-# Path to the locations.json data file
+# Path to stored files
 DATA_FILE = os.path.join(BASE_DIR, "locations.json")
+PIPELINES_FILE = os.path.join(BASE_DIR, "pipelines.json")
 
 # Ensure required directories exist
 os.makedirs(LOCATIONS_DIR, exist_ok=True)  # Creates 'backend/media/locations'
@@ -24,7 +25,22 @@ def load_data():
     with open(DATA_FILE, "r") as f:
         return json.load(f)
 
-# Save data to JSON
 def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
+
+# Pipelines Persistence
+if not os.path.exists(PIPELINES_FILE):
+    with open(PIPELINES_FILE, "w") as f:
+        f.write('{"pipelines": []}')  # Ensure pipelines.json exists
+
+def load_pipelines():
+    if os.path.exists(PIPELINES_FILE):
+        with open(PIPELINES_FILE, "r") as file:
+            return json.load(file)
+    return {}
+
+def save_pipelines(pipelines):
+    with open(PIPELINES_FILE, "w") as file:
+        json.dump(pipelines, file, indent=4)

@@ -2,8 +2,8 @@ import pytest
 import requests
 import json
 import time
+from tests.test_configs import BASE_URL
 
-BASE_URL = "http://127.0.0.1:8000/api"
 
 # ✅ Helper function to make API calls
 def make_request(method, endpoint, data=None):
@@ -33,7 +33,14 @@ def location():
     data = response.json()
     assert "id" in data
     assert data["name"] == "Test Ranch"
-    return data["id"]
+    location_id = data["id"]
+
+    yield location_id # Pass location_id to our tests
+
+    # Cleanup: delete location after the test
+    time.sleep(0.5)
+    delete_response = make_request("DELETE", f"/locations/{location_id}")
+    assert delete_response.status_code in [200, 404] # 404 ok if already deleted
 
 @pytest.fixture
 def job(location):
@@ -43,7 +50,14 @@ def job(location):
     assert "id" in data
     assert data["name"] == "Test Job"
     assert data["location_id"] == location
-    return data["id"]
+    job_id =  data["id"]
+
+    yield job_id # Pass job_id on to other tests
+
+    # Cleanup: ensure we delete resources for test job
+    time.sleep(0.5)
+    delete_response = make_request("DELETE", f"/jobs/{job_id}")
+    assert delete_response.status_code in [200, 404] # 404 ok if already deleted
 
 
 # ✅ Test listing locations
