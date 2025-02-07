@@ -46,3 +46,7 @@ fastapi = {extras = ["standard"], version = "^0.115.7"}
 uvicorn = "^0.34.0"
 panel = {extras = ["fastapi"], version = "^1.6.0"}
 
+
+[tool.poetry.group.testing.dependencies]
+pytest = "^8.3.4"
+

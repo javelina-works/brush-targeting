@@ -1,73 +1,70 @@
 from fastapi import APIRouter, HTTPException
-import json
 import os
 import uuid
-from backend.models.locations import Location, Job
-from backend.config import LOCATIONS_DIR, DATA_FILE 
+from backend.models.locations import Location, LocationCreate
+from backend.config import LOCATIONS_DIR, DATA_FILE, load_data, save_data
 
 router = APIRouter()
 
 
-# Ensure data file exists
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w") as f:
-        json.dump({"locations": [], "jobs": []}, f)
-
-# Load data from JSON
-def load_data():
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
-
-# Save data to JSON
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-
-
-# Create a location
+# [CREATE] a location
 @router.post("/locations/", response_model=Location)
-def create_location(name: str):
+def create_location(location: LocationCreate):
     data = load_data()
-    location = Location(id=str(uuid.uuid4()), name=name)
+    location = Location(id=str(uuid.uuid4()), name=location.name)
     data["locations"].append(location.model_dump())
     save_data(data)
 
     # Create directory for this location
-    # location_path = os.path.join(LOCATIONS_DIR, location.id)
-    # os.makedirs(location_path, exist_ok=True)
+    location_path = os.path.join(LOCATIONS_DIR, location.id)
+    os.makedirs(location_path, exist_ok=True)
 
     return location
 
-# List locations
+
+# [UPDATE] a location
+@router.put("/locations/{location_id}", response_model=Location)
+def update_location(location_id: str, new_location: LocationCreate):
+    data = load_data()
+    location = next((loc for loc in data["locations"] if loc["id"] == location_id), None)
+
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    location["name"] = new_location.name  # Update name
+    save_data(data)
+    return location
+
+
+# [DELETE] location
+@router.delete("/locations/{location_id}")
+def delete_location(location_id: str):
+    data = load_data()
+
+    # Find location
+    location = next((loc for loc in data["locations"] if loc["id"] == location_id), None)
+    if not location:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    # Delete associated jobs
+    data["jobs"] = [job for job in data["jobs"] if job["location_id"] != location_id]
+
+    # Remove location
+    data["locations"] = [loc for loc in data["locations"] if loc["id"] != location_id]
+    save_data(data)
+
+    # Remove directory
+    location_path = os.path.join(LOCATIONS_DIR, location_id)
+    if os.path.exists(location_path):
+        os.rmdir(location_path)
+
+    return {"message": "Location deleted"}
+
+
+# [LIST] locations
 @router.get("/locations/")
 def list_locations():
     data = load_data()
     return data["locations"]
 
 
-# Create a job linked to a location
-@router.post("/jobs/", response_model=Job)
-def create_job(location_id: str, name: str):
-    data = load_data()
-
-    # Validate location exists
-    if not any(loc["id"] == location_id for loc in data["locations"]):
-        raise HTTPException(status_code=404, detail="Location not found")
-
-    job = Job(id=str(uuid.uuid4()), location_id=location_id, name=name)
-    data["jobs"].append(job.model_dump())
-    save_data(data)
-
-    # Create directory for this job inside its location
-    job_path = os.path.join(LOCATIONS_DIR, location_id, job.id)
-    os.makedirs(job_path, exist_ok=True)
-
-    return job
-
-# List jobs
-@router.get("/jobs/")
-def list_jobs(location_id: str = None):
-    data = load_data()
-    if location_id:
-        return [job for job in data["jobs"] if job["location_id"] == location_id]
-    return data["jobs"]

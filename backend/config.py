@@ -1,4 +1,5 @@
 import os
+import json
 
 # Base directory for all storage
 BASE_DIR = "backend/media"
@@ -17,3 +18,13 @@ os.makedirs(BASE_DIR, exist_ok=True)  # Ensures 'backend/media' exists
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, "w") as f:
         f.write('{"locations": [], "jobs": []}')  # Initialize empty JSON
+
+# Load data from JSON
+def load_data():
+    with open(DATA_FILE, "r") as f:
+        return json.load(f)
+
+# Save data to JSON
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)

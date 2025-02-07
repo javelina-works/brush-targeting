@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 # from strawberry.fastapi import GraphQLRouter
 # from graphql.schema import schema
-from backend.routes import locations
+from backend.routes import locations, jobs
 
 app = FastAPI()
 
@@ -10,7 +10,7 @@ app = FastAPI()
 
 
 app.include_router(locations.router, prefix="/api")
-
+app.include_router(jobs.router, prefix="/api")
 
 @app.get("/")
 async def root():
