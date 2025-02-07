@@ -32,7 +32,8 @@ dependencies = [
     "ipykernel (>=6.29.5,<7.0.0)",
     "ipywidgets-bokeh (>=1.6.0,<2.0.0)",
     "panel (==1.6.0)",
-    "jupyter-bokeh (>=4.0.5,<5.0.0)"
+    "jupyter-bokeh (>=4.0.5,<5.0.0)",
+    "strawberry-graphql[debug-server] (>=0.258.0,<0.259.0)"
 ]
 
 

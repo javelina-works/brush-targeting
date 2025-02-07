@@ -1,0 +1,24 @@
+{
+    "locations": [
+        {
+            "id": "23a56232-076a-470d-8c7c-c82ee9dddde4",
+            "name": "Ranch1"
+        },
+        {
+            "id": "062c229b-661a-4b28-bf2a-5a5c3472dee1",
+            "name": "Ranch1"
+        },
+        {
+            "id": "46e838a0-c299-4860-917d-685c7a60dd20",
+            "name": "Ranch2"
+        }
+    ],
+    "jobs": [
+        {
+            "id": "b958c07b-d119-4a7e-baf3-004a1d29d0f9",
+            "location_id": "23a56232-076a-470d-8c7c-c82ee9dddde4",
+            "name": "BrushTreatment",
+            "input_image_path": null
+        }
+    ]
+}

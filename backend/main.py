@@ -1,23 +1,17 @@
 from fastapi import FastAPI
-from backend.routes import files, health, panel
+# from strawberry.fastapi import GraphQLRouter
+# from graphql.schema import schema
+from backend.routes import locations
 
-from panel.io.fastapi import add_applications, add_application
-from brush_targeting.main import create_panel_app
+app = FastAPI()
 
-app = FastAPI(title="FastAPI Backend for Panel App")
-
-# Include routes
-app.include_router(files.router)
-app.include_router(health.router)
-
-# Run Panel app in FastAPI
-# https://panel.holoviz.org/how_to/integrations/FastAPI.html#tips-tricks
-add_applications({
-    "/": panel.create_panel_app,
-    "/widget": panel.create_panel_widget,
-}, app=app)
+# graphql_app = GraphQLRouter(schema)
+# app.include_router(graphql_app, prefix="/graphql")
 
 
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+app.include_router(locations.router, prefix="/api")
+
+
+@app.get("/")
+async def root():
+    return {"message": "Go to /graphql for the GraphQL API"}
