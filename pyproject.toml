@@ -33,7 +33,8 @@ dependencies = [
     "ipywidgets-bokeh (>=1.6.0,<2.0.0)",
     "panel (==1.6.0)",
     "jupyter-bokeh (>=4.0.5,<5.0.0)",
-    "strawberry-graphql[debug-server] (>=0.258.0,<0.259.0)"
+    "strawberry-graphql (==0.258.1)",
+    "graphql-core (<3.3.0)",
 ]
 
 

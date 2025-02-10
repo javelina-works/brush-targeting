@@ -3,10 +3,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-# from strawberry.fastapi import GraphQLRouter
-# from graphql.schema import schema
 from PIL import Image
 from io import BytesIO
+
+import strawberry
+from strawberry.fastapi import GraphQLRouter
+
+from backend.graphql.schema import schema
 from backend.routes import locations, jobs, upload, pipeline, targets
 
 
@@ -39,9 +42,9 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-
-# graphql_app = GraphQLRouter(schema)
-# app.include_router(graphql_app, prefix="/graphql")
+# Mount GraphQL API
+graphql_app = GraphQLRouter(schema)
+app.include_router(graphql_app, prefix="/graphql")
 
 # Register routers
 app.include_router(locations.router, prefix="/api") # General locations, equivalent to a project
