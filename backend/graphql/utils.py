@@ -1,21 +1,34 @@
 import os
 import json
+from backend.config import LOCATIONS_DIR, DATA_FILE, load_data, save_data
 
-# Simulated function for fetching assets based on location_id and job_id
 def fetch_map_assets(location_id: str, job_id: str):
     """
-    Fetches a list of assets (e.g., GeoJSON files) related to a given location and job.
-    
-    This could be modified to query a database or read from a file system.
-    """
-    asset_store = {
-        ("location1", "jobA"): [
-            {"id": "1", "name": "Region Boundary", "type": "GeoJSON", "geojson": '{"type": "Polygon", "coordinates": [[0,0],[1,1],[1,0],[0,0]]}'},
-            {"id": "2", "name": "Target Points", "type": "GeoJSON", "geojson": '{"type": "MultiPoint", "coordinates": [[0.5,0.5],[1.5,1.5]]}'}
-        ],
-        ("location2", "jobB"): [
-            {"id": "3", "name": "Voronoi Cells", "type": "GeoJSON", "geojson": '{"type": "Polygon", "coordinates": [[2,2],[3,3],[3,2],[2,2]]}'}
-        ]
-    }
+    Fetches all available map assets (GeoJSON files) for a given location and job.
 
-    return asset_store.get((location_id, job_id), [])
+    - Reads files from `data/{location_id}/{job_id}/`
+    - Returns a list of available asset names and their GeoJSON contents.
+    """
+    assets = []
+    job_path = os.path.join(LOCATIONS_DIR, location_id, job_id, "map")
+    print(job_path)
+
+    if not os.path.exists(job_path):
+        return []  # Return empty if no assets exist for this job
+
+    for filename in os.listdir(job_path):
+        if filename.endswith(".geojson"):  # Only load GeoJSON files
+            layer_name = filename.replace(".geojson", "")  # Strip file extension
+            file_path = os.path.join(job_path, filename)
+
+            with open(file_path, "r", encoding="utf-8") as f:
+                geojson_data = json.load(f)
+
+            assets.append({
+                "id": layer_name,  # Using filename as the ID
+                "name": layer_name,  # Layer name from file
+                "type": "GeoJSON",
+                "geojson": json.dumps(geojson_data)  # Store as string
+            })
+
+    return assets

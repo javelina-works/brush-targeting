@@ -12,8 +12,8 @@ DATA_FILE = os.path.join(BASE_DIR, "locations.json")
 PIPELINES_FILE = os.path.join(BASE_DIR, "pipelines.json")
 
 # Ensure required directories exist
-os.makedirs(LOCATIONS_DIR, exist_ok=True)  # Creates 'backend/media/locations'
 os.makedirs(BASE_DIR, exist_ok=True)  # Ensures 'backend/media' exists
+os.makedirs(LOCATIONS_DIR, exist_ok=True)  # Creates 'backend/media/locations'
 
 # Ensure locations.json exists
 if not os.path.exists(DATA_FILE):
