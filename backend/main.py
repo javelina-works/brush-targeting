@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 # from graphql.schema import schema
 from PIL import Image
 from io import BytesIO
-from backend.routes import locations, jobs, upload, pipeline
+from backend.routes import locations, jobs, upload, pipeline, targets
 
 
 @asynccontextmanager
@@ -30,24 +30,25 @@ async def app_lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=app_lifespan)
 
-# # Add CORS middleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://localhost:3000", "*"],  # Allow only your frontend origin
-#     allow_methods=["GET", "POST"],  # Allow all HTTP methods (GET, POST, etc.)
-#     allow_headers=["*"],  # Allow all headers
-#     allow_credentials=True,
-# )
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "*"],  # Allow only your frontend origin
+    allow_methods=["GET", "POST"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+    allow_credentials=True,
+)
 
 
 # graphql_app = GraphQLRouter(schema)
 # app.include_router(graphql_app, prefix="/graphql")
 
 # Register routers
-app.include_router(locations.router, prefix="/api")
-app.include_router(jobs.router, prefix="/api")
-app.include_router(upload.router, prefix="/api")
+app.include_router(locations.router, prefix="/api") # General locations, equivalent to a project
+app.include_router(jobs.router, prefix="/api")  # Jobs at a location. Organizes jobs for each project
+app.include_router(upload.router, prefix="/api") # Handles file uploads to server
 app.include_router(pipeline.router, prefix="/api")
+app.include_router(targets.router, prefix="/api") # Handle targets associated with a job
 
 # # Serve static files from the Vue build directory
 # app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")
