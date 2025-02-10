@@ -1,6 +1,7 @@
 <template>
     <div>
-      <h1>Home Page</h1>
+      <h1>Planner Page</h1>
+      <p>Interactive map for target analysis.</p>
       <MapLayers />
       <MapView />
     </div>

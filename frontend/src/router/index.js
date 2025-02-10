@@ -6,6 +6,7 @@ import HomeView from '@/views/HomeView.vue'; // Avoid '@' for now
 import Locations from '@/views/Locations.vue';
 import AuditPage from '@/views/AuditPage.vue';
 import SearchPage from '@/views/SearchPage.vue';
+import PlannerPage from '@/views/PlannerPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
 const routes = [
@@ -18,6 +19,7 @@ const routes = [
         { path: '/locations', component: Locations },
         { path: '/search', component: SearchPage },
         { path: '/audit', component: AuditPage },
+        { path: '/planner', component: PlannerPage },
         { path: '/:pathMatch(.*)*', component: NotFound }, // Catch-all 404
     ],
   },
