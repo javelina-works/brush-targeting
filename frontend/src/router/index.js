@@ -1,9 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router';
+
+import DefaultLayout from '@/layouts/DefaultLayout.vue';
+
 import HomeView from '@/views/HomeView.vue'; // Avoid '@' for now
-// import HomeView from '../views/HomeView.vue'; // Avoid "@/" for now
+import Locations from '@/views/Locations.vue';
+import AuditPage from '@/views/AuditPage.vue';
+import SearchPage from '@/views/SearchPage.vue';
+import NotFound from '@/views/NotFound.vue';
 
 const routes = [
-  { path: '/', name: 'Home', component: HomeView }
+  {
+    path: '/',
+    component: DefaultLayout,
+    // component: HomeView,
+    redirect: '/audit',
+    children: [
+        { path: '/locations', component: Locations },
+        { path: '/search', component: SearchPage },
+        { path: '/audit', component: AuditPage },
+        { path: '/:pathMatch(.*)*', component: NotFound }, // Catch-all 404
+    ],
+  },
 ];
 
 const router = createRouter({

@@ -5,6 +5,7 @@
   <router-view />
 </template>
 
-<style scoped>
-/* Remove all default styles */
+<style lang="scss">
+// Import Main styles for this application
+@import 'styles/style';
 </style>

@@ -114,6 +114,12 @@ Run the app via the FastAPI server with the following command:
 poetry run uvicorn brush_targeting.main:app --reload
 ```
 
+or for the **backend**:
+
+```bash
+poetry run uvicorn backend.main:app --reload
+```
+
 or
 
 ```bash
