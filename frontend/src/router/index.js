@@ -4,7 +4,7 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 
 import HomeView from '@/views/HomeView.vue'; // Avoid '@' for now
 import Locations from '@/views/Locations.vue';
-import AuditPage from '@/views/AuditPage.vue';
+import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/SearchPage.vue';
 import PlannerPage from '@/views/PlannerPage.vue';
 import NotFound from '@/views/NotFound.vue';
