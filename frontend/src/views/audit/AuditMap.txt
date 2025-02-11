@@ -8,8 +8,6 @@
   import { useQuery } from '@vue/apollo-composable';
   import gql from 'graphql-tag';
   import 'leaflet/dist/leaflet.css';
-  import "@geoman-io/leaflet-geoman-free"; // Import Geoman
-  import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
   
   /** ✅ References */
   const mapContainer = ref(null);
@@ -43,6 +41,7 @@
         jobId: jobId.value,
         layers: layers.value
     });
+
   
   /** ✅ Initialize Leaflet Map */
   onMounted(() => {
@@ -53,89 +52,11 @@
     }).addTo(map);
   
     L.control.scale().addTo(map);
-
-    layerControl = L.control.layers(null, {}, {
-        sortLayers: true, // Custom sort for our layers
-        sortFunction: (a, b, a_name, b_name) => {
-            const layerPriority = ["region_contour", "approved_targets", "removed_targets"];
-
-            const indexA = layerPriority.indexOf(a_name);
-            const indexB = layerPriority.indexOf(b_name);
-            return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
-        }
-    }).addTo(map);
-
-    map.pm.addControls({
-        position: "topleft",
-        drawRectangle: true,
-        drawMarker: false, 
-        
-        drawCircleMarker: false, 
-        drawCircle: false,
-        drawPolygon: false, 
-        drawPolyline: false, 
-        drawText: false,
-
-        removalMode: true,
-        dragMode: false, 
-        editMode: false,
-        rotateMode: false,
-        cutPolygon: false,
-    });
-
-    map.on("pm:create", (e) => {
-        if (e.shape === "Rectangle") {
-            const bounds = e.layer.getBounds(); // Get bounding box
-            toggleTargetsInRegion(bounds);
-            map.removeLayer(e.layer); // Remove rectangle after selection
-        }
-    });
+    layerControl = L.control.layers(null, {}).addTo(map);
 
     console.log("✅ Map Initialized, waiting for API data...");
   });
 
-
-function toggleTargetsInRegion(bounds) {
-  const featuresToMove = []; // Store features and their target layers
-  const layersToCheck = ["approved_targets", "removed_targets"];
-
-  layersToCheck.forEach((fromLayer) => {
-    if (!geojsonLayers[fromLayer]) return;
-
-    const toLayer = (fromLayer === "approved_targets") ? "removed_targets" : "approved_targets";
-    geojsonLayers[fromLayer].eachLayer((layer) => {
-      if (layer.feature && layer.getLatLng) {
-        const latlng = layer.getLatLng();
-        if (bounds.contains(latlng)) {
-            featuresToMove.push({ feature: layer.feature, fromLayer, toLayer });
-        }
-      }
-    });
-  });
-
-  // Now move all collected features in one step
-  featuresToMove.forEach(({ feature, fromLayer, toLayer }) => {
-    moveFeature(feature, fromLayer, toLayer);
-  });
-}
-
-
-function moveFeature(feature, fromLayer, toLayer) {
-    if (!geojsonLayers[fromLayer] || !geojsonLayers[toLayer]) return;
-
-    // Remove from current layer
-    geojsonLayers[fromLayer].eachLayer(layer => {
-        if (layer.feature === feature) {
-            geojsonLayers[fromLayer].removeLayer(layer);
-        }
-    });
-
-    geojsonLayers[toLayer].addData(feature); // Add to the new layer
-    // console.log(`🔄 Moved feature ${feature.properties.target_id} from ${fromLayer} to ${toLayer}`);
-
-    // TODO: Send update to backend so this persists
-    // updateBackend(feature, toLayer);
-}
 
 const layerFactory = {
     region_contour: () => L.geoJSON(null, {
@@ -144,15 +65,13 @@ const layerFactory = {
     approved_targets: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "blue", radius: 5 }),
         onEachFeature: (feature, layer) => {
-            layer.bindPopup(`<b>Approved Target</b><br>ID: ${feature.properties.id}`);
-            layer.on("click", () => moveFeature(feature, "approved_targets", "removed_targets"));
+        layer.bindPopup(`<b>Approved Target</b><br>ID: ${feature.properties.id}`);
         },
     }),
     removed_targets: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "red", radius: 5 }),
         onEachFeature: (feature, layer) => {
-            layer.bindPopup(`<b>Removed Target</b><br>ID: ${feature.properties.id}`);
-            layer.on("click", () => moveFeature(feature, "removed_targets", "approved_targets"));
+        layer.bindPopup(`<b>Removed Target</b><br>ID: ${feature.properties.id}`);
         },
     }),
     default: () => L.geoJSON(null, {
@@ -176,10 +95,6 @@ function updateLayer(name, geojsonData) {
   if (geojsonLayers[name]) {
     geojsonLayers[name].clearLayers(); // Clear existing features
     geojsonLayers[name].addData(geojsonData);
-
-    if (geojsonLayers["region_contour"]) {
-        geojsonLayers["region_contour"].bringToBack();
-    }
   }
 }
 
@@ -208,16 +123,13 @@ watch(result, (newData) => {
   });
 });
 
+
 </script>
-
-
-
-<style scoped>
-
-.map-container {
+  
+  <style scoped>
+  .map-container {
     width: 100%;
     height: 100vh;
-}
-
+  }
 </style>
   
