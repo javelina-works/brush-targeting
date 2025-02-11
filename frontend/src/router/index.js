@@ -1,9 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import HeadFootLayout from '@/layouts/HeadFootLayout.vue';
 
 import HomeView from '@/views/HomeView.vue'; // Avoid '@' for now
 import Locations from '@/views/Locations.vue';
+import LocationJobManager from '@/views/locations/LocationJobManager.vue';
+
+import UploadPage from '@/views/UploadPage.vue';
 import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/SearchPage.vue';
 import PlannerPage from '@/views/PlannerPage.vue';
@@ -12,17 +16,26 @@ import NotFound from '@/views/NotFound.vue';
 const routes = [
   {
     path: '/',
+    name: 'Home',
     component: DefaultLayout,
     // component: HomeView,
-    redirect: '/audit',
+    redirect: '/upload',
     children: [
-        { path: '/locations', component: Locations },
-        { path: '/search', component: SearchPage },
-        { path: '/audit', component: AuditPage },
-        { path: '/planner', component: PlannerPage },
+        { path: '/upload', component: UploadPage },
+        { path: '/search', name: "Target Search", component: SearchPage },
+        { path: '/audit', name: "Target Audit", component: AuditPage },
+        { path: '/planner', name: "Mission Planner", component: PlannerPage },
         { path: '/:pathMatch(.*)*', component: NotFound }, // Catch-all 404
     ],
   },
+  {
+    path: '/locations',
+    name: "Locations",
+    component: HeadFootLayout,
+    children: [
+      { path: '', name: "Select Location", component: LocationJobManager },
+    ]
+  }
 ];
 
 const router = createRouter({

@@ -8,6 +8,12 @@ export default [
     name: 'Locations',
     to: '/locations',
     icon: 'cil-speedometer',
+  },
+  {
+    component: 'CNavItem',
+    name: 'Upload Files',
+    to: '/upload',
+    icon: 'cil-speedometer',
     badge: {
       color: 'primary',
       text: 'NEW',
