@@ -91,9 +91,60 @@
         }
     });
 
+    map.on("click", (e) => {
+        console.log("🖱️ Map clicked at:", e.latlng);
+        addNewTarget(e.latlng);
+    });
+
     console.log("✅ Map Initialized, waiting for API data...");
   });
 
+
+// Possibly the wrong way to go about this? Should we expose from the backend?
+// It feels like this is something that should by typed later on
+function getTargetSchema() {
+  const layersToCheck = ["approved_targets", "removed_targets"];
+
+  for (let layerName of layersToCheck) {
+    if (!geojsonLayers[layerName]) continue;
+
+    let schemaExample = null;
+    geojsonLayers[layerName].eachLayer((layer) => {
+      if (layer.feature) {
+        schemaExample = { ...layer.feature.properties };
+      }
+    });
+
+    if (schemaExample) return schemaExample; // Return first found schema
+  }
+
+  return {}; // Default if no schema is found
+}
+
+  function addNewTarget(latlng) {
+    const schema = getTargetSchema(); // Get existing properties structure
+    const newId = crypto.randomUUID(); // Generate a new UUID for target_id
+
+    const newFeature = {
+        type: "Feature",
+        properties: { 
+            ...schema, // Copy all properties from existing targets
+            target_id: newId, // Ensure unique ID
+            addedByUser: true, // Optional flag
+        },
+        geometry: {
+            type: "Point",
+            coordinates: [latlng.lng, latlng.lat],
+        },
+    };
+
+  // Add to the approved_targets layer
+  geojsonLayers["approved_targets"].addData(newFeature);
+  console.log(`✅ Added new target at ${latlng.lat}, ${latlng.lng}`);
+
+  // TODO: Send to backend for persistence
+//   updateBackend(newFeature, "approved_targets");
+}
 
 function toggleTargetsInRegion(bounds) {
   const featuresToMove = []; // Store features and their target layers
