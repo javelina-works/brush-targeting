@@ -1,42 +1,53 @@
+<template></template>
+
 <script setup>
-import { useQuery } from "@vue/apollo-composable";
-import gql from "graphql-tag";  // ✅ Import gql from graphql-tag
-import { ref, watch } from "vue";
+import { watch, ref, onMounted } from 'vue';
+import L from 'leaflet';
 
-const locationId = ref("6a9b0014-fa87-463d-9767-46cf5c762b9f");
-const jobId = ref("0b8dd912-c4a6-4bd1-882e-c182bf120065");
-const layers = ref(["region_outline", "targets"]);
+/** Props from parent (AuditPage) */
+const props = defineProps({
+  map: Object,  // The Leaflet map instance
+  layers: Array // The layers to add/remove dynamically
+});
 
-const GET_MAP_ASSETS = gql`
-  query GetMapAssets($locationId: String!, $jobId: String!, $layers: [String!]) {
-    mapAssets(locationId: $locationId, jobId: $jobId, layers: $layers) {
-      id
-      name
-      geojson
-    }
+const geoJsonLayers = ref([]);
+
+/** Watch for Layer Changes */
+watch(() => props.layers, (newLayers) => {
+  console.log("📡 New Layers Received:", newLayers);
+  if (!props.map) {
+    console.error("⚠️ Map instance is undefined!");
+    return;
   }
-`;
 
-const { result, loading, refetch } = useQuery(GET_MAP_ASSETS, {
-  locationId: locationId.value,
-  jobId: jobId.value,
-  layers: layers.value,
-});
+  // Remove previous layers
+  geoJsonLayers.value.forEach(layer => props.map.removeLayer(layer));
+  geoJsonLayers.value = [];
 
-// Auto-refetch when location/job changes
-watch([locationId, jobId, layers], () => {
-  refetch();
-});
+  // Add new layers
+  newLayers.forEach(layer => {
+    try {
+      const geoJsonLayer = L.geoJSON(JSON.parse(layer.geojson), {
+        style: () => layer.style,
+        pointToLayer: (feature, latlng) => {
+          if (layer.name === "targets") {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: "blue",
+              color: "black",
+              weight: 1,
+              opacity: 0.5,
+              fillOpacity: 0.3
+            });
+          }
+          return L.marker(latlng);
+        }
+      }).addTo(props.map);
+
+      geoJsonLayers.value.push(geoJsonLayer);
+    } catch (error) {
+      console.error(`Error parsing GeoJSON for layer ${layer.name}:`, error);
+    }
+  });
+}, { deep: true });
 </script>
-
-<template>
-  <div>
-    <h3>Map Layers</h3>
-    <div v-if="loading">Loading...</div>
-    <ul v-else>
-      <li v-for="asset in result?.mapAssets" :key="asset.id">
-        {{ asset.name }} (GeoJSON: {{ asset.geojson.substring(0, 50) }}...)
-      </li>
-    </ul>
-  </div>
-</template>
