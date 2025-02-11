@@ -8,6 +8,11 @@ class GeoJSONFeatureCollection:
     type: str = "FeatureCollection"
     features: str  # Stored as a JSON string
 
+@strawberry.input
+class GeoJSONInput:
+    name: str  # The name of the GeoJSON file (e.g., "approved_targets")
+    geojson: str  # The GeoJSON data as a string
+
 @strawberry.type
 class MapAsset:
     id: str
@@ -15,6 +20,11 @@ class MapAsset:
     type: str
     geojson: str  # Assuming GeoJSON is stored as a string or file path
 
+
+@strawberry.type
+class UpdateGeoJSONResponse:
+    updatedAssets: List[MapAsset]  # List of successfully updated assets
+    errorMessage: Optional[str]  # Error message if any files failed
 
 # @strawberry.type
 # class Query:

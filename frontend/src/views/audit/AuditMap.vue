@@ -1,11 +1,15 @@
+
 <template>
     <div class="map-container" ref="mapContainer"></div>
+    <button class="save-button" @click="saveTargets">Save Changes</button>
+    <button class="refresh-button" @click="refreshData">Refresh Data</button>
+    <p v-if="savingStatus" class="status-message">{{ savingStatus }}</p>
 </template>
   
 <script setup>
   import { ref, watch, onMounted } from 'vue';
   import L from 'leaflet';
-  import { useQuery } from '@vue/apollo-composable';
+  import { useQuery, useMutation } from '@vue/apollo-composable';
   import gql from 'graphql-tag';
   import 'leaflet/dist/leaflet.css';
   import "@geoman-io/leaflet-geoman-free"; // Import Geoman
@@ -38,15 +42,93 @@
   `;
 
     /** Fetch GeoJSON Data */
-    const { result } = useQuery(GET_MAP_ASSETS, {
+    const { result, refetch } = useQuery(GET_MAP_ASSETS, {
         locationId: locationId.value,
         jobId: jobId.value,
         layers: layers.value
     });
   
+    function refreshData() {
+        savingStatus.value = "Refreshing data...";
+        
+        refetch().then(({ data }) => {
+            if (data && data.mapAssets) {
+                updateMapLayers(data) // Manually run update of all map layers
+                // console.log("🔄 Data refetched and applied to result.");
+                savingStatus.value = "✅ Data refreshed!";
+            } else {
+                console.warn("⚠️ Refetch returned no new data.");
+                savingStatus.value = "⚠️ No new data available.";
+            }
+        }).catch(error => {
+            console.error("❌ Refresh failed:", error);
+            savingStatus.value = "❌ Failed to refresh data.";
+        });
+    }
+
+
+
+
+    /** GraphQL update query */
+    const UPDATE_GEOJSON_FILES = gql`
+    mutation updateMapAssets($locationId: String!, $jobId: String!, $geojsonFiles: [GeoJSONInput!]!) {
+        updateMapAssets(locationId: $locationId, jobId: $jobId, geojsonFiles: $geojsonFiles) {
+            updatedAssets {
+                id
+                name
+                geojson
+            }
+            errorMessage
+        }
+    }
+    `;
+
+    const savingStatus = ref(null); // Update save message when button clicked
+    const { mutate } = useMutation(UPDATE_GEOJSON_FILES);
+
+    function saveTargets() {
+        savingStatus.value = "Saving...";
+    
+        // const geojsonFiles = Object.keys(geojsonLayers).map(layerName => ({
+        const geojsonFiles = ["approved_targets", "removed_targets"]
+            .filter(layerName => geojsonLayers[layerName]) // Ensure layer exists
+            .map(layerName => ({
+                name: layerName,
+                geojson: JSON.stringify(geojsonLayers[layerName].toGeoJSON()),
+            }));
+
+        if (geojsonFiles.length === 0) {
+            savingStatus.value = "⚠️ No changes to save.";
+            return;
+        }
+
+        // Send mutation request
+        mutate({
+                locationId: locationId.value,
+                jobId: jobId.value,
+                geojsonFiles: geojsonFiles,
+        })
+        .then(response => {
+            console.log("✅ Save successful:", response);
+
+            if (response.data.updateMapAssets.errorMessage) {
+                savingStatus.value = `⚠️ Some files failed: ${response.data.updateMapAssets.errorMessage}`;
+            } else {
+                savingStatus.value = "✅ All changes saved!";
+            }
+        })
+        .catch(error => {
+            console.error("❌ Save failed:", error);
+            savingStatus.value = "❌ Save failed. Please try again.";
+        });
+    }
+
+
   /** ✅ Initialize Leaflet Map */
   onMounted(() => {
-    map = L.map(mapContainer.value).setView([30.2506, -103.6035], 14);
+    map = L.map(mapContainer.value, {
+        maxZoom: 21,
+    }).setView([30.2506, -103.6035], 14);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -76,7 +158,7 @@
         drawPolyline: false, 
         drawText: false,
 
-        removalMode: true,
+        removalMode: false, // We don't want to delete, just add to removed_targets
         dragMode: false, 
         editMode: false,
         rotateMode: false,
@@ -92,7 +174,7 @@
     });
 
     map.on("click", (e) => {
-        console.log("🖱️ Map clicked at:", e.latlng);
+        // console.log("🖱️ Map clicked at:", e.latlng);
         addNewTarget(e.latlng);
     });
 
@@ -234,29 +316,34 @@ function updateLayer(name, geojsonData) {
   }
 }
 
+
+function updateMapLayers(newData) {
+    if (!newData || !newData.mapAssets) return;
+    console.log("📡 API Data Received:", newData.mapAssets);
+
+    newData.mapAssets.forEach(asset => {
+        try {
+            const parsedGeoJson = JSON.parse(asset.geojson); // ✅ Convert JSON string to object
+            const name = asset.name
+
+            if (geojsonLayers[name]) {
+            updateLayer(name, parsedGeoJson);
+            } else {
+            // If a new layer type appears, initialize it dynamically
+            geojsonLayers[name] = (layerFactory[name] || layerFactory.default)();
+            geojsonLayers[name].addTo(map);
+            updateLayer(name, parsedGeoJson);
+            layerControl.addOverlay(geojsonLayers[name], name);
+            }
+        } catch (error) {
+            console.error(`❌ Error parsing GeoJSON for ${asset.name}:`, error);
+        }
+    });
+}
+
 /** ✅ Watch for API Data and Update Layers */
 watch(result, (newData) => {
-  if (!newData || !newData.mapAssets) return;
-  console.log("📡 API Data Received:", newData.mapAssets);
-
-  newData.mapAssets.forEach(asset => {
-    try {
-      const parsedGeoJson = JSON.parse(asset.geojson); // ✅ Convert JSON string to object
-      const name = asset.name
-
-      if (geojsonLayers[name]) {
-        updateLayer(name, parsedGeoJson);
-      } else {
-        // If a new layer type appears, initialize it dynamically
-        geojsonLayers[name] = (layerFactory[name] || layerFactory.default)();
-        geojsonLayers[name].addTo(map);
-        updateLayer(name, parsedGeoJson);
-        layerControl.addOverlay(geojsonLayers[name], name);
-      }
-    } catch (error) {
-      console.error(`❌ Error parsing GeoJSON for ${asset.name}:`, error);
-    }
-  });
+  updateMapLayers(newData);
 });
 
 </script>
@@ -267,8 +354,30 @@ watch(result, (newData) => {
 
 .map-container {
     width: 100%;
-    height: 100vh;
+    height: 75vh;
 }
+
+.save-button {
+  padding: 8px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.status-message {
+  font-size: 14px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
 
 </style>
   

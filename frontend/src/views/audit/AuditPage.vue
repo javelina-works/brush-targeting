@@ -1,9 +1,10 @@
 <template>
   <AuditMap />
 </template>
-  
-  <script setup>
+
+
+<script setup>
   import AuditMap from './AuditMap.vue';  
 
-  </script>
+</script>
   

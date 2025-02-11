@@ -59,6 +59,7 @@ def fetch_map_assets(location_id: str, job_id: str):
             with open(file_path, "r", encoding="utf-8") as f:
                 geojson_data = json.load(f)
 
+            # TODO: should really type this as MapAsset if returning as such
             assets.append({
                 "id": layer_name,  # Using filename as the ID
                 "name": layer_name,  # Layer name from file
@@ -67,3 +68,29 @@ def fetch_map_assets(location_id: str, job_id: str):
             })
 
     return assets
+
+
+def save_geojson_file(location_id: str, job_id: str, file_name: str, geojson_data: str) -> bool:
+    """
+    Saves updated GeoJSON data to disk.
+    """
+    job_path = os.path.join(LOCATIONS_DIR, location_id, job_id, "map")
+
+    if not os.path.exists(job_path):
+        os.makedirs(job_path)  # Ensure the directory exists
+
+    file_path = os.path.join(job_path, f"{file_name}.geojson")
+
+    try:
+        # Validate JSON
+        parsed_geojson = json.loads(geojson_data)
+
+        # Write to file
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(parsed_geojson, f, indent=4)
+
+        print(f"✅ Successfully saved {file_name}.geojson")
+        return True
+    except Exception as e:
+        print(f"❌ Error saving {file_name}.geojson:", e)
+        return False
