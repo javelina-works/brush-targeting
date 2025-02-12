@@ -4,7 +4,7 @@ import json
 PROCESSING_CRS = "EPSG:32613"
 DISPLAY_CRS = "EPSG:4326"
 REGION_FILE = "region_contour.geojson"
-VORONOI_FILE = "voronoi_partition.geojson"
+VORONOI_FILE = "voronoi_cells.geojson"
 
 # Base directory for all storage
 BASE_DIR = "backend/media"
