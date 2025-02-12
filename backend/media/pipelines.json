@@ -6,34 +6,9 @@
             "stages": null
         },
         {
-            "name": "My Second Pipeline",
-            "id": "69900a0c-560f-41b3-8432-e7d7716352f1",
-            "stages": null
-        },
-        {
-            "name": "Test Pipeline",
-            "id": "e4baa98b-801d-43ec-805a-c778920fed66",
-            "stages": [
-                {
-                    "id": "d4957912-3417-430a-9070-0c196a1f34a6",
-                    "function": "stage2"
-                }
-            ]
-        },
-        {
-            "name": "string",
-            "id": "053fc571-ef20-475d-8883-77cea7938f2c",
+            "name": "Default Pipeline",
+            "id": "e0d7791f-0732-42a7-82de-f30b12b78eee",
             "stages": []
-        },
-        {
-            "name": "Test Pipeline",
-            "id": "e4a0c030-fcb8-4693-9eae-e13220c23ebb",
-            "stages": [
-                {
-                    "id": "4602812b-bb6f-47b6-a2f2-71be6fbff520",
-                    "function": "stage2"
-                }
-            ]
         }
     ]
 }

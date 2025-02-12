@@ -9,7 +9,7 @@ import LocationJobManager from '@/views/locations/LocationJobManager.vue';
 
 import UploadPage from '@/views/UploadPage.vue';
 import AuditPage from '@/views/audit/AuditPage.vue';
-import SearchPage from '@/views/SearchPage.vue';
+import SearchPage from '@/views/search/SearchPage.vue';
 import PlannerPage from '@/views/PlannerPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
