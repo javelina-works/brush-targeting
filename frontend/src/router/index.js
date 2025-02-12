@@ -4,13 +4,12 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import HeadFootLayout from '@/layouts/HeadFootLayout.vue';
 
 import HomeView from '@/views/HomeView.vue'; // Avoid '@' for now
-import Locations from '@/views/Locations.vue';
 import LocationJobManager from '@/views/locations/LocationJobManager.vue';
 
 import UploadPage from '@/views/UploadPage.vue';
 import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/search/SearchPage.vue';
-import PlannerPage from '@/views/PlannerPage.vue';
+import PlannerPage from '@/views/planner/PlannerPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
 const routes = [

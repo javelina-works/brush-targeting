@@ -1,5 +1,6 @@
 import strawberry
-from .resolvers import get_map_assets, update_map_assets
+from .resolvers.map_assets import get_map_assets, update_map_assets
+from .resolvers.tesselation import generate_region_tesselation
 from .types import MapAsset, UpdateGeoJSONResponse
 # from .types import Query, Mutation
 
@@ -13,5 +14,6 @@ class Query:
 @strawberry.type
 class Mutation:
     updateMapAssets: UpdateGeoJSONResponse = strawberry.field(resolver=update_map_assets) 
+    generateTesselation: MapAsset = strawberry.field(resolver=generate_region_tesselation)
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)

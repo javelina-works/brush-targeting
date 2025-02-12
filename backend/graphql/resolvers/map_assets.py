@@ -1,16 +1,16 @@
 import strawberry
 from typing import Optional, List
-from .types import MapAsset, GeoJSONInput, UpdateGeoJSONResponse
+from ..types import MapAsset, GeoJSONInput, UpdateGeoJSONResponse
 # from backend.models.project import Project
 # from backend.persistence.file_manager import load_pipeline, save_pipeline
-from .utils import fetch_map_assets, save_geojson_file
+from ..utils import fetch_map_assets, save_geojson_file
 
 # @strawberry.field
 def get_map_assets(location_id: str, job_id: str, layers: Optional[List[str]] = None) -> list[MapAsset]:
     """
     Resolver to retrieve all assets for a given location and job.
     """
-    from .utils import fetch_map_assets
+    from ..utils import fetch_map_assets
     
     assets = fetch_map_assets(location_id, job_id)
     if layers: # If layers are specified, filter only the requested types

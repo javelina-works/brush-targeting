@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Optional, Dict
 # import geopandas as gpd
 from backend.config import LOCATIONS_DIR, DATA_FILE, load_data, save_data
 
@@ -34,6 +35,25 @@ def ensure_audit_files(job_path):
             json.dump(removed_targets, f, indent=4)
 
 
+def fetch_map_asset(location_id: str, job_id: str, file_name: str) -> Optional[Dict]:
+    """
+    Utility function to retrieve a specific file for a given project & job.
+    - Supports GeoJSON file retrieval and conversion to a GeoDataFrame.
+    """
+    job_path = os.path.join(LOCATIONS_DIR, location_id, job_id, "map")
+    file_path = os.path.join(job_path, file_name)
+
+    if not os.path.exists(file_path):
+        return None
+
+    try:
+        with open(file_path, "r") as file:
+            data = json.load(file)
+        return data # JSON data
+    except Exception as e:
+        print(f"Error loading {file_name}: {e}")
+        return None
+
 
 def fetch_map_assets(location_id: str, job_id: str):
     """
@@ -50,6 +70,7 @@ def fetch_map_assets(location_id: str, job_id: str):
         return []  # Return empty if no assets exist for this job
 
     ensure_audit_files(job_path) # Creates target files if they don't exist
+    
 
     for filename in os.listdir(job_path):
         if filename.endswith(".geojson"):  # Only load GeoJSON files
@@ -94,3 +115,4 @@ def save_geojson_file(location_id: str, job_id: str, file_name: str, geojson_dat
     except Exception as e:
         print(f"❌ Error saving {file_name}.geojson:", e)
         return False
+    
