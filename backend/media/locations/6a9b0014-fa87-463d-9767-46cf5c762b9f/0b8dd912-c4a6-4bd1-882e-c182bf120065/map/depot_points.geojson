@@ -1,0 +1,110 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "0",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_6"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60369658441398,
+                    30.249839119920047
+                ]
+            }
+        },
+        {
+            "id": "1",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_67"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60484603514308,
+                    30.248713254333992
+                ]
+            }
+        },
+        {
+            "id": "2",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_196"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60307562203785,
+                    30.2479209896352
+                ]
+            }
+        },
+        {
+            "id": "3",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_299"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60174235564845,
+                    30.247713414782737
+                ]
+            }
+        },
+        {
+            "id": "4",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_344"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60126689417345,
+                    30.249835172844715
+                ]
+            }
+        },
+        {
+            "id": "5",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_449"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.59973012944565,
+                    30.248271964000274
+                ]
+            }
+        },
+        {
+            "id": "6",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 150.0,
+                "depot_id": "depot_502"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.5990401794697,
+                    30.24981137412163
+                ]
+            }
+        }
+    ]
+}

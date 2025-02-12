@@ -6,12 +6,33 @@
 
     <!-- Control Buttons -->
     <div class="controls">
-      <button v-if="!hasVoronoiCells" @click="generateTessellation">
+      <!-- <button v-if="!hasVoronoiCells" @click="generateTessellation">
         Generate Tessellation
-      </button>
-      <button v-if="!hasDepots" @click="generateDepots">
+      </button> -->
+      <!-- <button v-if="!hasDepots" @click="generateDepots">
         Generate Depots
-      </button>
+      </button> -->
+
+      <CButton class="mb-3" color="primary" aria-expanded={visible} aria-controls="collapseTesselation" @click="cellsCollapsed = !cellsCollapsed">
+        {{ cellsCollapsed ? "Show Cells Settings" : "Hide Cells Settings" }}
+      </CButton>
+      <CButton class="mb-3" color="primary" aria-expanded={visible} aria-controls="collapseDepots" @click="depotsCollapsed = !depotsCollapsed">
+        {{ depotsCollapsed ? "Show Depot Settings" : "Hide Depot Settings" }}
+      </CButton>
+
+      <CRow>
+        <CCol xs="6">
+          <CCollapse :visible="!cellsCollapsed">
+            <TesselationControls />
+          </CCollapse>
+        </CCol>
+        <CCol xs="6">
+          <CCollapse :visible="!depotsCollapsed">
+            <DepotControls />
+          </CCollapse>
+        </CCol>
+      </CRow>
+
     </div>
   </div>
 </template>
@@ -20,16 +41,23 @@
 import { ref, watch, watchEffect, onMounted, computed } from 'vue';
 import L from "leaflet";
 import { useLocationStore } from '@/stores/locationStore';
-import { useMapData, useDepotsMutation, useTessellationMutation } from './graphQL'
+import { useMapData, } from '@/api/graphql_queries';
 import { initializeLayers, updateLayerData } from "./layers";
 
+import TesselationControls from './TesselationControls.vue';
+import DepotControls from './DepotControls.vue';
+
 export default {
+  components: { TesselationControls, DepotControls },
   setup() {
     const locationStore = useLocationStore();
     const locationId = computed( () => locationStore.selectedLocation?.id );
     const jobId = computed( () => locationStore.selectedJob?.id );
 
     const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
+
+    const cellsCollapsed = ref(true);
+    const depotsCollapsed = ref(true);
 
     const map = ref(null);
     const hasVoronoiCells = ref(false);
@@ -38,13 +66,11 @@ export default {
     const layers = ref([
       "region_contour",
       "voronoi_cells",
+      "depot_points",
     ]);
 
     // Load map assets
     const { result, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
-    const { mutate: generateTessellationMutation } = useTessellationMutation();
-    const { mutate: generateDepotsMutation } = useDepotsMutation();
-
 
     // Initialize Leaflet map
     const initMap = () => {
@@ -75,35 +101,14 @@ export default {
       }
     });
 
-    // Generate Voronoi Tessellation
-    const generateTessellation = async () => {
-      const { data } = await generateTessellationMutation({
-        locationId: props.locationId,
-        jobId: props.jobId,
-        targetAreaAcres: 0.5,
-        maxIterations: 10
-      });
-      if (data?.generateTesselation?.geojson) {
-        updateLayerData("voronoi_cells", data.generateTesselation.geojson);
-        hasVoronoiCells.value = true;
-      }
-    };
-
-    // Generate Depots
-    const generateDepots = async () => {
-      const { data } = await generateDepotsMutation({
-        locationId: props.locationId,
-        jobId: props.jobId
-      });
-      if (data?.generateDepots?.geojson) {
-        updateLayerData("depot_locations", data.generateDepots.geojson);
-        hasDepots.value = true;
-      }
-    };
-
     onMounted(initMap);
 
-    return { hasVoronoiCells, hasDepots, generateTessellation, generateDepots };
+    return { 
+      hasVoronoiCells, 
+      hasDepots,
+      cellsCollapsed, 
+      depotsCollapsed 
+    };
   }
 };
 

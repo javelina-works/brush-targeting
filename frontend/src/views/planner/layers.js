@@ -25,7 +25,7 @@ export const layerFactory = {
     voronoi_cells: () => L.geoJSON(null, {
         style: { color: "purple", weight: 1, fill: false, fillOpacity: 0.1, },
     }),
-    depot_locations: () => L.geoJSON(null, {
+    depot_points: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "green", radius: 6 }),
         onEachFeature: (feature, layer) => {
             layer.bindPopup(`<b>Depot</b><br>ID: ${feature.properties.id}`);
