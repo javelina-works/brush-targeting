@@ -16,6 +16,7 @@
     "@coreui/vue": "^5.4.1",
     "@geoman-io/leaflet-geoman-free": "^2.18.3",
     "@vue/apollo-composable": "^4.2.1",
+    "@vueuse/core": "^12.5.0",
     "axios": "^1.7.9",
     "graphql": "^16.10.0",
     "leaflet": "^1.9.4",
