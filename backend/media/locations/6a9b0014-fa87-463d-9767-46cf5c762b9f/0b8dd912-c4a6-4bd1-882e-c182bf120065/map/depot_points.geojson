@@ -5,14 +5,44 @@
             "id": "0",
             "type": "Feature",
             "properties": {
-                "depot_radius": 510.0,
-                "depot_id": "depot_9"
+                "depot_radius": 250.0,
+                "depot_id": "depot_29"
             },
             "geometry": {
                 "type": "Point",
                 "coordinates": [
-                    -103.60296383401193,
-                    30.25028622290846
+                    -103.60008570426261,
+                    30.250040503532805
+                ]
+            }
+        },
+        {
+            "id": "1",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 250.0,
+                "depot_id": "depot_50"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60356363563551,
+                    30.24884459978276
+                ]
+            }
+        },
+        {
+            "id": "2",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 250.0,
+                "depot_id": "depot_78"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.60031637363213,
+                    30.24880993862285
                 ]
             }
         }

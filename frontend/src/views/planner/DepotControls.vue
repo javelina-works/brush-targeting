@@ -66,7 +66,7 @@
         });
   
         if (data?.generateDepots?.geojson) {
-          updateLayerData("depot_locations", data.generateDepots.geojson);
+          updateLayerData("depot_points", data.generateDepots.geojson);
         }
   
         isGenerating.value = false;

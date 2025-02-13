@@ -12,6 +12,19 @@ const GET_MAP_ASSETS = gql`
   }
 `;
 
+const UPDATE_GEOJSON_FILES = gql`
+  mutation updateMapAssets($locationId: String!, $jobId: String!, $geojsonFiles: [GeoJSONInput!]!) {
+      updateMapAssets(locationId: $locationId, jobId: $jobId, geojsonFiles: $geojsonFiles) {
+          updatedAssets {
+              id
+              name
+              geojson
+          }
+          errorMessage
+      }
+  }
+`;
+
 const GENERATE_TESSELLATION = gql`
   mutation getTesselation($locationId: String!, $jobId: String!, $targetAreaAcres: Float!, $maxIterations: Int!) {
       generateTesselation(locationId: $locationId, jobId: $jobId, targetAreaAcres: $targetAreaAcres, maxIterations: $maxIterations) {
@@ -35,13 +48,22 @@ const GENERATE_DEPOTS = gql`
 `;
 
 
+
 // GraphQL API handlers
 export function useMapData(locationId, jobId, layers) {
-    return useQuery(GET_MAP_ASSETS, { 
-        locationId, 
-        jobId, 
-        layers 
-    });
+  return useQuery(GET_MAP_ASSETS, { 
+      locationId, 
+      jobId, 
+      layers 
+  });
+}
+
+export function updateMapData(locationId, jobId, geojsonFiles) {
+  return useMutation(UPDATE_GEOJSON_FILES, {
+    locationId,
+    jobId,
+    geojsonFiles
+  });
 }
   
 export function useTessellationMutation(locationId, jobId, targetAreaAcres, maxIterations) {

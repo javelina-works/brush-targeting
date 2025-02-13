@@ -37,7 +37,6 @@
 <script>
 import L, { geoJSON } from "leaflet";
 import 'leaflet/dist/leaflet.css';
-import sha256 from "crypto-js/sha256"; // ✅ Install: npm install crypto-js
 import "@geoman-io/leaflet-geoman-free"; // Import Geoman
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
@@ -80,7 +79,6 @@ export default {
     const initMap = () => {
       map.value = L.map("map", {
         maxZoom: 21,
-        zoomAnimation: false, // https://stackoverflow.com/a/66516334
       }).setView([30.2506, -103.6035], 14);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map.value);
@@ -107,28 +105,27 @@ export default {
     };
 
     // Reactively process API data
-    watch(
-      () => result.value?.mapAssets,  // ✅ Only watches `mapAssets`
-      (newAssets, oldAssets) => {
-        if (error.value) {
-          console.error("GraphQL error:", error.value);
-        }
-        if (loading.value) {
-          console.log("Data is still loading...");
-        }
-        if (shouldQueryRun.value && result.value?.mapAssets) {
-          newAssets.forEach((asset) => {
-            console.log(`Updating layer ${asset.name}`); // Debug layer updates
-            updateLayerData(asset.name, asset.geojson);
-            // if (asset.name === "voronoi_cells") hasVoronoiCells.value = true;
-            // if (asset.name === "depot_points") hasDepots.value = true;
-          });
-        }
+    watchEffect(() => {
+      if (error.value) {
+        console.error("GraphQL error:", error.value);
+      }
+      if (loading.value) {
+        console.log("Data is still loading...");
+      }
+      if (shouldQueryRun.value && result.value?.mapAssets) {
+        result.value.mapAssets.forEach((asset) => {
+          console.log(`Updating layer ${asset.name}`);
+          updateLayerData(asset.name, asset.geojson);
+          if (asset.name === "voronoi_cells") hasVoronoiCells.value = true;
+          if (asset.name === "depot_points") hasDepots.value = true;
+        });
+      }
     });
 
     // Save updated GeoJSON layers
     async function saveLayers() {
       const geojsonLayers = getAllLayers();
+
       const geojsonFiles = ["voronoi_cells", "depot_points"]
         .filter(layerName => geojsonLayers[layerName]) // Ensure layer exists
         .map(layerName => ({
@@ -136,6 +133,8 @@ export default {
             geojson: JSON.stringify(geojsonLayers[layerName].toGeoJSON()),
         }));
 
+      console.log(geojsonFiles[1]);
+      
       // Send updated GeoJSON layers to the backend
       try {
           const { data } = await updateMapAssets({
@@ -143,16 +142,16 @@ export default {
               jobId: jobId.value,
               geojsonFiles: geojsonFiles
           });
-
+          
           if (data.error) {
             console.error("Error saving layers:", updateError);
           }
-          if (updateError.value) {
-            console.error("Save API error:", updateError.value);
+          if (updateError.data) {
+            console.error("Save API error:", updateError.data);
             alert("Failed to save layers!");
           } else {
             console.log("Layers successfully saved:", data);
-            // alert("Map layers saved successfully!");
+            alert("Map layers saved successfully!");
           }
       } catch (err) {
           console.error("Save error:", err);

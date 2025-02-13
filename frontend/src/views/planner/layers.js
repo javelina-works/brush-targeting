@@ -1,4 +1,4 @@
-import L from "leaflet";
+import L, { circle } from "leaflet";
 
 // 🔹 Store layers in an object (initialized as empty)
 const mapLayers = {};
@@ -8,6 +8,7 @@ export const layerFactory = {
     region_contour: () => L.geoJSON(null, {
         style: { color: "blue", weight: 2, fill: false, fillOpacity: 0.05 },
     }),
+
     approved_targets: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "blue", radius: 5 }),
         onEachFeature: (feature, layer) => {
@@ -15,6 +16,7 @@ export const layerFactory = {
             layer.on("click", () => moveFeature(feature, "approved_targets", "removed_targets"));
         },
     }),
+
     removed_targets: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "red", radius: 5 }),
         onEachFeature: (feature, layer) => {
@@ -22,48 +24,60 @@ export const layerFactory = {
             layer.on("click", () => moveFeature(feature, "removed_targets", "approved_targets"));
         },
     }),
+
     voronoi_cells: () => L.geoJSON(null, {
         style: { color: "purple", weight: 1, fill: false, fillOpacity: 0.1, },
     }),
+    
     depot_points: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => {
             const radius = feature.properties.depot_radius || 500; // Default if missing
-            const radius_circle = L.circle(latlng, { 
-                radius: radius, 
-                color: "green",
-                // fillOpacity: 0.02,
-                fill: false,
+            const radius_circle = L.circle(latlng, {
+                radius: radius, color: "green", weight: 1, fill: false,
+                pmIgnore: false,
             });
-            // const marker = L.circleMarker(latlng, {radius: 3, color: "black", draggable: true, pmIgnore: false});
-            // const marker = L.circle(latlng, {radius: 3, color: "black", draggable: true, pmIgnore: false});
+            // radius_circle.properties = { ...feature.properties };
+            // radius_circle.feature = feature;
+
             const marker = L.marker(latlng, {
+                properties: { ...feature.properties },
                 draggable: true,
-                icon: L.divIcon({
-                    className: "depot-center",
-                    html: "●", // Unicode dot
-                    iconSize: [10, 10], // Small dot size
-                    iconAnchor: [5, 5] // Center alignment
-                })
+                // icon: L.divIcon({
+                //     className: "depot-center",
+                //     html: "●", // Unicode dot
+                //     iconSize: [10, 10], // Small dot size
+                //     iconAnchor: [5, 5] // Center alignment
+                // })
             });
-            
+            marker.properties = { ...feature.properties }
+            marker.feature = feature;
+
             // 🔹 Keep both elements in sync while dragging
             marker.on("drag", (event) => {
                 const newLatLng = event.target.getLatLng();
                 radius_circle.setLatLng(newLatLng); // Move the circle with the marker
             });
 
-            return marker;
+            marker.on("dragend", (event) => {
+                const newLatLng = event.target.getLatLng();
+                console.log("Marker moved: ", newLatLng);
+                radius_circle.setLatLng(newLatLng); // Move the circle with the marker
+                marker.setLatLng(newLatLng);
+                feature.geometry.coordinates = [newLatLng.lng, newLatLng.lat];
+            });
 
-            // radius_circle.on("dragstart", () => {
-            //     marker.dragging.enable(); // Allow dragging both
-            // });
+            const depotGroup = L.layerGroup([radius_circle, marker]);
+            marker.addTo(depotGroup);
+            radius_circle.addTo(depotGroup);
 
-            // radius_circle.on("drag", (event) => {
-            //     const newLatLng = event.target.getLatLng();
-            //     marker.setLatLng(newLatLng); // Move the marker with the circle
-            // });
-
-            // return L.layerGroup([radius_circle, marker]);
+            // depotGroup.pm.setOptions({syncLayersOnDrag: true});
+            // depotGroup.properties = { ...feature.properties };
+            // depotGroup.feature = feature;
+            
+            // console.log("Depot props: ", depotGroup.properties);
+            // console.log("Circle props: ", radius_circle.properties);
+            // console.log("Marker props: ", marker.properties);
+            return depotGroup;
         },
         onEachFeature: (feature, layer) => {
             layer.bindPopup(`<b>Depot</b><br>ID: ${feature.properties.id}<br>Radius: ${feature.properties.depot_radius || 500}m`);
@@ -82,8 +96,6 @@ export function initializeLayers(map) {
     Object.keys(layerFactory).forEach((key) => {
         mapLayers[key] = layerFactory[key]();
         mapLayers[key].addTo(map); // Attach to map immediately (even empty)
-
-        
 
         // 🚫 Disable editing for region & voronoi
         if (key === "region_contour" || key === "voronoi_cells") {
@@ -110,6 +122,32 @@ export function updateLayerData(layerKey, geojson) {
 // 🔹 Get a Specific Layer
 export function getLayer(layerKey) {
     return mapLayers[layerKey] || null;
+}
+
+export function getAllLayers() {
+    // return mapLayers;
+    const returnLayers = {};
+
+    Object.keys(mapLayers).forEach((layerKey) => {
+        const layer = mapLayers[layerKey];
+
+        // 🔹 Extract GeoJSON, but only store the marker (not the radius circle)
+        if (layerKey === "depot_points") {
+            // Iterate through each depot layer group
+            layer.eachLayer((group) => {
+                // 🟢 Ensure we only extract the marker (not the circle)
+                group.eachLayer((subLayer) => {
+                    if (!subLayer.feature) {
+                        // console.log("Removing layer", subLayer);
+                        group.removeLayer(subLayer); // Remove layer with no features to prevent duplication
+                    }
+                });
+            });
+        }
+        returnLayers[layerKey] = layer;
+    });
+
+    return returnLayers;
 }
 
 // 🔹 Move Feature Between Layers (Example: Approved → Removed Targets)
