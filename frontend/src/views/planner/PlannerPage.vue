@@ -4,15 +4,8 @@
     <!-- Map Container -->
     <div id="map" ref="mapContainer"></div>
 
-    <!-- Control Buttons -->
     <div class="controls">
-      <!-- <button v-if="!hasVoronoiCells" @click="generateTessellation">
-        Generate Tessellation
-      </button> -->
-      <!-- <button v-if="!hasDepots" @click="generateDepots">
-        Generate Depots
-      </button> -->
-
+      <!-- Control Buttons -->
       <CButton class="mb-3" color="primary" aria-expanded={visible} aria-controls="collapseTesselation" @click="cellsCollapsed = !cellsCollapsed">
         {{ cellsCollapsed ? "Show Cells Settings" : "Hide Cells Settings" }}
       </CButton>
@@ -38,8 +31,12 @@
 </template>
 
 <script>
-import { ref, watch, watchEffect, onMounted, computed } from 'vue';
 import L from "leaflet";
+import 'leaflet/dist/leaflet.css';
+import "@geoman-io/leaflet-geoman-free"; // Import Geoman
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+
+import { ref, watch, watchEffect, onMounted, computed } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
 import { useMapData, } from '@/api/graphql_queries';
 import { initializeLayers, updateLayerData } from "./layers";
@@ -80,6 +77,24 @@ export default {
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map.value);
       L.control.scale().addTo(map.value);
+      map.value.pm.addControls({
+        position: "topleft",
+        drawRectangle: true,
+        drawMarker: false, 
+        
+        drawCircleMarker: false, 
+        drawCircle: false,
+        drawPolygon: false, 
+        drawPolyline: false, 
+        drawText: false,
+
+        removalMode: false, // We don't want to delete, just add to removed_targets
+        dragMode: true, 
+        editMode: false,
+        rotateMode: false,
+        cutPolygon: false,
+      });
+
       initializeLayers(map.value); // Attach layers
     };
 
