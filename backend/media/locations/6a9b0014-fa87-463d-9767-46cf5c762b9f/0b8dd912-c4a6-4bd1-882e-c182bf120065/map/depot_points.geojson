@@ -6,13 +6,13 @@
             "type": "Feature",
             "properties": {
                 "depot_radius": 250.0,
-                "depot_id": "depot_29"
+                "depot_id": "depot_15"
             },
             "geometry": {
                 "type": "Point",
                 "coordinates": [
-                    -103.60008570426261,
-                    30.250040503532805
+                    -103.60330935659638,
+                    30.24829311543364
                 ]
             }
         },
@@ -21,13 +21,13 @@
             "type": "Feature",
             "properties": {
                 "depot_radius": 250.0,
-                "depot_id": "depot_50"
+                "depot_id": "depot_66"
             },
             "geometry": {
                 "type": "Point",
                 "coordinates": [
-                    -103.60356363563551,
-                    30.24884459978276
+                    -103.60376682933818,
+                    30.249786655434676
                 ]
             }
         },
@@ -36,13 +36,13 @@
             "type": "Feature",
             "properties": {
                 "depot_radius": 250.0,
-                "depot_id": "depot_78"
+                "depot_id": "depot_133"
             },
             "geometry": {
                 "type": "Point",
                 "coordinates": [
-                    -103.60031637363213,
-                    30.24880993862285
+                    -103.60031370896702,
+                    30.248997887910512
                 ]
             }
         }

@@ -37,7 +37,6 @@
 <script>
 import L, { geoJSON } from "leaflet";
 import 'leaflet/dist/leaflet.css';
-import sha256 from "crypto-js/sha256"; // ✅ Install: npm install crypto-js
 import "@geoman-io/leaflet-geoman-free"; // Import Geoman
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
@@ -73,7 +72,7 @@ export default {
     ]);
 
     // Load map assets
-    const { result, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
+    const { result: getResult, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
     const { mutate: updateMapAssets, error: updateError } = updateMapData();
 
     // Initialize Leaflet map
@@ -108,7 +107,7 @@ export default {
 
     // Reactively process API data
     watch(
-      () => result.value?.mapAssets,  // ✅ Only watches `mapAssets`
+      () => getResult.value?.mapAssets,  // ✅ Only watches `mapAssets`
       (newAssets, oldAssets) => {
         if (error.value) {
           console.error("GraphQL error:", error.value);
@@ -116,9 +115,8 @@ export default {
         if (loading.value) {
           console.log("Data is still loading...");
         }
-        if (shouldQueryRun.value && result.value?.mapAssets) {
+        if (shouldQueryRun.value && newAssets) {
           newAssets.forEach((asset) => {
-            console.log(`Updating layer ${asset.name}`); // Debug layer updates
             updateLayerData(asset.name, asset.geojson);
             // if (asset.name === "voronoi_cells") hasVoronoiCells.value = true;
             // if (asset.name === "depot_points") hasDepots.value = true;

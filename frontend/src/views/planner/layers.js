@@ -42,12 +42,12 @@ export const layerFactory = {
             const marker = L.marker(latlng, {
                 properties: { ...feature.properties },
                 draggable: true,
-                // icon: L.divIcon({
-                //     className: "depot-center",
-                //     html: "●", // Unicode dot
-                //     iconSize: [10, 10], // Small dot size
-                //     iconAnchor: [5, 5] // Center alignment
-                // })
+                icon: L.divIcon({
+                    className: "depot-center",
+                    html: "●", // Unicode dot
+                    iconSize: [10, 10], // Small dot size
+                    iconAnchor: [5, 5] // Center alignment
+                })
             });
             marker.properties = { ...feature.properties }
             marker.feature = feature;
@@ -110,6 +110,7 @@ export function initializeLayers(map) {
 
 // 🔹 Update Layer Data: Populates a layer without replacing it
 export function updateLayerData(layerKey, geojson) {
+    console.log("Updating layer: ", layerKey);
     if (mapLayers[layerKey]) {
         mapLayers[layerKey].clearLayers(); // Remove old data
         mapLayers[layerKey].addData(JSON.parse(geojson)); // Add new data
