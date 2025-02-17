@@ -3253,6 +3253,30 @@ rich = ">=13.7.1"
 typing-extensions = ">=4.12.2"
 
 [[package]]
+name = "rio-cogeo"
+version = "5.4.1"
+description = "Cloud Optimized GeoTIFF (COGEO) creation plugin for rasterio"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version >= \"3.12\" or python_version == \"3.11\""
+files = [
+    {file = "rio_cogeo-5.4.1-py3-none-any.whl", hash = "sha256:7387f8e523759c694313158be99be0581a6d115862d3f764d553a42a8b2278f6"},
+    {file = "rio_cogeo-5.4.1.tar.gz", hash = "sha256:2d7de85e4d6655698f6eb871d9ea62d645a855dfcdfbae7dc4bd08ed892d555b"},
+]
+
+[package.dependencies]
+click = ">=7.0"
+morecantile = ">=5.0,<7.0"
+pydantic = ">=2.0,<3.0"
+rasterio = ">=1.3.3"
+
+[package.extras]
+dev = ["pre-commit"]
+docs = ["mkdocs", "mkdocs-material"]
+test = ["cogdumper", "pytest", "pytest-cov"]
+
+[[package]]
 name = "rio-tiler"
 version = "7.4.0"
 description = "User friendly Rasterio plugin to read raster datasets."
@@ -4056,4 +4080,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "8372718a1b3e5601ff1952a59c9f5bd79af4d8c555d5bd622906d9e2489abec2"
+content-hash = "57eba70a376dcd534f66896ec3fe9a97f25309d43d0706621ae5c1ff7e82c2a4"

@@ -1,5 +1,10 @@
 import os
 import json
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 PROCESSING_CRS = "EPSG:32613"
 DISPLAY_CRS = "EPSG:4326"
