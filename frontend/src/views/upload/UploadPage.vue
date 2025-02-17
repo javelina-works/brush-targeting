@@ -23,6 +23,9 @@
       <progress :value="uploadProgress" max="100"></progress>
     </div> -->
 
+    <!-- Region Image Upload Component -->
+    <OrthophotoUploader @upload-success="onOrthophotoUpload" :jobId="selectedJob.id"/>
+
     <!-- Region Outline Upload Component -->
     <GeoJsonUploader @upload-success="onGeoJsonUpload" :jobId="selectedJob.id"/>
 
@@ -42,9 +45,14 @@ import api from '@/api/axios.js';
 import L from "leaflet";
 import 'leaflet/dist/leaflet.css';
 import GeoJsonUploader from './GeoJsonUploader.vue';
+import OrthophotoUploader from './OrthophotoUploader.vue';
 
 export default {
-  components: { CButton, GeoJsonUploader },
+  components: { 
+    CButton, 
+    GeoJsonUploader, 
+    OrthophotoUploader 
+  },
   setup() {
     const locationStore = useLocationStore();
     const selectedLocation = computed(() => locationStore.selectedLocation);
@@ -77,19 +85,18 @@ export default {
       }
     }
 
-    function handleFileSelectOrthophoto(event) {
-      orthophoto.value = event.target.files[0];
+    function onOrthophotoUpload(filename) {
+      console.log("Uploaded orthophoto: ", filename);
+      orthophoto.value = filename;
+      // TODO: begin tiling region image
     }
 
-    function triggerFileInputOrthophoto() {
-      document.querySelector("[ref='orthophotoInput']").click();
-    }
+
 
     // Triggered after region outline uploaded
     function onGeoJsonUpload(filename) {
       console.log("Uploaded file: ", filename);
       regionOutlineFile.value = filename;
-      // regionOutlineFile.value = true;
       loadGeoJson(filename);
     }
 
@@ -129,14 +136,12 @@ export default {
     return {
       selectedLocation,
       selectedJob,
-      orthophoto,
       uploading,
       uploadProgress,
-      uploadFiles,
-      handleFileSelectOrthophoto,
-      triggerFileInputOrthophoto,
-      regionOutlineFile,
       mapContainer,
+      orthophoto,
+      onOrthophotoUpload,
+      regionOutlineFile,
       onGeoJsonUpload,
     };
   },

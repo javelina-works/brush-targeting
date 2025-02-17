@@ -3,6 +3,7 @@ import json
 
 PROCESSING_CRS = "EPSG:32613"
 DISPLAY_CRS = "EPSG:4326"
+REGION_ORTHOPHOTO = "region_orthophoto.tif"
 REGION_FILE = "region_contour.geojson"
 VORONOI_FILE = "voronoi_cells.geojson"
 DEPOT_FILE = "depot_points.geojson"
