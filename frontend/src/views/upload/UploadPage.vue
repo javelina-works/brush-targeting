@@ -6,23 +6,6 @@
     <p><strong>Project ID:</strong> {{ selectedLocation?.id || 'Not Found' }}</p>
     <p><strong>Job ID:</strong> {{ selectedJob?.id || 'Not Found' }}</p>
 
-    <!-- Orthophoto Upload -->
-    <!-- <div class="upload-box">
-      <input type="file" @change="handleFileSelectOrthophoto" ref="orthophotoInput" accept="image/*" hidden />
-      <CButton color="primary" @click="triggerFileInputOrthophoto">Upload Orthophoto</CButton>
-    </div> -->
-
-    <!-- Upload Button -->
-    <!-- <CButton color="success" @click="uploadFiles" :disabled="!orthophoto">
-      Upload Files
-    </CButton> -->
-
-    <!-- Upload Progress -->
-    <!-- <div v-if="uploading">
-      <p>Uploading {{ uploadProgress }}%</p>
-      <progress :value="uploadProgress" max="100"></progress>
-    </div> -->
-
     <!-- Region Image Upload Component -->
     <OrthophotoUploader @upload-success="onOrthophotoUpload" :jobId="selectedJob.id"/>
 
@@ -30,7 +13,8 @@
     <GeoJsonUploader @upload-success="onGeoJsonUpload" :jobId="selectedJob.id"/>
 
     <!-- Leaflet Map -->
-    <div v-if="regionOutlineFile">
+    <!-- <div v-if="regionOutlineLoaded || regionTilesLoaded"> -->
+    <div>
       <h2>Region Outline</h2>
       <div id="map" ref="mapContainer"></div>
     </div>
@@ -39,13 +23,15 @@
 
 <script>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import { useLocationStore } from '@/stores/locationStore';
-import { CButton } from '@coreui/vue';
-import api from '@/api/axios.js';
 import L from "leaflet";
 import 'leaflet/dist/leaflet.css';
+
+import api from '@/api/axios.js';
+import { useLocationStore } from '@/stores/locationStore';
+
 import GeoJsonUploader from './GeoJsonUploader.vue';
 import OrthophotoUploader from './OrthophotoUploader.vue';
+import { CButton } from '@coreui/vue';
 
 export default {
   components: { 
@@ -58,81 +44,83 @@ export default {
     const selectedLocation = computed(() => locationStore.selectedLocation);
     const selectedJob = computed(() => locationStore.selectedJob);
 
-    const orthophoto = ref(null);
-    // const regionOutlineFile = ref(null);
-    const regionOutlineFile = true;
     const map = ref(null);
     const mapContainer = ref(null);
-    const uploading = ref(false);
-    const uploadProgress = ref(0);
-
+    const regionOutlineLoaded = ref(false);
+    const regionTilesLoaded = ref(false);
     const BACKEND_URL = "http://localhost:8000";
 
-
-    async function uploadFiles() {
-      if (!selectedLocation.value || !selectedJob.value) {
-        alert('Please select a project and job first!');
-        return;
-      }
-
-      uploading.value = true;
-      try {
-        if (orthophoto.value) {
-          const orthophotoForm = new FormData();
-          orthophotoForm.append('file', orthophoto.value);
-          await api.post(`/upload/${selectedJob.value.id}/orthophoto`, orthophotoForm);
-        }
-      } catch (error) {
-        console.error('Upload failed:', error);
-      } finally {
-        uploading.value = false;
-      }
-    }
+    watch([regionOutlineLoaded, regionTilesLoaded], ([outline, tiles]) => {
+      console.log("Updated values:", { outline, tiles });
+    });
 
     function onOrthophotoUpload(filename) {
       console.log("Uploaded orthophoto: ", filename);
-      orthophoto.value = filename;
+      regionTilesLoaded.value = true;
       // TODO: begin tiling region image
       loadRegionTiles();
     }
 
     async function loadRegionTiles() {
       try {
-        if (map.value) {
-          const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
-          console.log("Adding tile layer: ", TILE_API);
-          L.tileLayer(TILE_API, {
-              attribution: 'COG Tiles',
-              maxZoom: 21,
-              timeout: 30000,  // 30 seconds
+        const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);
+        if (response.data.tile_url && map.value) {
+          // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
+          // console.log("Adding tile layer: ", TILE_API);
+          console.log("Adding region tile layer:", response.data.tile_url);
+          L.tileLayer(response.data.tile_url, {
+            attribution: 'COG Tiles',
+            maxZoom: 21,
+            timeout: 3000, // 3 seconds
+            crossOrigin: true, 
           }).addTo(map.value);
+          regionTilesLoaded.value = true;
         }
       } catch (error) {
-        console.error("Failed to load tile layer:", error);
+        console.warn("No COG tile available or error loading tiles:", error);
       }
     }
+
+    // async function loadRegionTiles() {
+    //   try {
+    //     if (map.value) {
+    //       
+    //       L.tileLayer(TILE_API, {
+    //           attribution: 'COG Tiles',
+    //           maxZoom: 21,
+    //           timeout: 30000,  // 30 seconds
+    //       }).addTo(map.value);
+    //     }
+    //   } catch (error) {
+    //     console.error("Failed to load tile layer:", error);
+    //   }
+    // }
 
 
     // Triggered after region outline uploaded
     function onGeoJsonUpload(filename) {
       console.log("Uploaded file: ", filename);
-      regionOutlineFile.value = filename;
+      regionOutlineLoaded.value = true;
       loadGeoJson(filename);
     }
 
     async function loadGeoJson(filename) {
       try {
-        const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
-        const geoJsonData = await response.data;
-        if (map.value) {
-          L.geoJSON(geoJsonData).addTo(map.value);
-        }
+        // const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
+        const response = await api.get(`api/files/${selectedJob.value.id}/region_contour.geojson`);
+        if (response.data && map.value) {
+          const geoJsonLayer = L.geoJSON(response.data, {
+            style: { color: "blue", weight: 2, fill: false, }
+          }).addTo(map.value);
+          map.value.fitBounds(geoJsonLayer.getBounds());
+          regionOutlineLoaded.value = true;
+        }        
       } catch (error) {
         console.error("Failed to load GeoJSON:", error);
       }
     }
 
-    watch(regionOutlineFile, (newFile) => {
+    watch(regionOutlineLoaded, (newFile) => {
       if (newFile) {
         nextTick(() => {
           initMap();  // Reinitialize the map when regionOutlineFile updates
@@ -142,14 +130,16 @@ export default {
 
     function initMap() {
       if (!mapContainer.value) return;
-
+      if (map.value) return; // Prevent duplicate map initialization
+      
       map.value = L.map(mapContainer.value, {
         maxZoom: 21,
       }).setView([30.2506, -103.6035], 14);
-
+      
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map.value);
       L.control.scale().addTo(map.value);
-
+      
+      loadGeoJson();
       loadRegionTiles();
     }
 
@@ -158,12 +148,10 @@ export default {
     return {
       selectedLocation,
       selectedJob,
-      uploading,
-      uploadProgress,
       mapContainer,
-      orthophoto,
+      regionOutlineLoaded,
+      regionTilesLoaded,
       onOrthophotoUpload,
-      regionOutlineFile,
       onGeoJsonUpload,
     };
   },

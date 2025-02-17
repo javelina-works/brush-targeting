@@ -1,14 +1,10 @@
-from fastapi import APIRouter, UploadFile, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pathlib import Path
-import asyncio
 import os
 from io import BytesIO
 from PIL import Image
-import rasterio
-from rasterio.enums import Compression
 from rio_tiler.io import Reader
-from rio_tiler.profiles import img_profiles
 from rio_tiler.errors import TileOutsideBounds
 from backend.config import ( 
     LOCATIONS_DIR, DATA_FILE, load_data, save_data, 
@@ -44,6 +40,22 @@ def get_image_path(job_id: str) -> Path:
         raise FileNotFoundError(f"Image file {image_path} not found for job {job_id}.")
 
     return image_path
+
+
+# [GET] URL for dynamic tiling
+@router.get("/get_tile_url/")
+async def get_tile_url(location_id: str, job_id: str, request: Request):
+    """Returns the tile server URL if a COG exists."""
+    cog_path = os.path.join(LOCATIONS_DIR, location_id, job_id, "tiles", REGION_COG)
+    if not os.path.exists(cog_path):
+        return JSONResponse(content={"error": "COG not found"}, status_code=404)
+
+    # Get the base URL from the request
+    base_url = str(request.base_url).rstrip("/")
+
+    tile_url = f"{base_url}/api/tile/{location_id}/{job_id}/" + "{z}/{x}/{y}.png"
+    return {"tile_url": tile_url}
+
 
 
 # [CREATE] tiles for region orthophoto
