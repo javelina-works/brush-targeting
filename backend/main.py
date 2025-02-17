@@ -10,7 +10,7 @@ import strawberry
 from strawberry.fastapi import GraphQLRouter
 
 from backend.graphql.schema import schema
-from backend.routes import locations, jobs, upload, pipeline, targets
+from backend.routes import locations, jobs, upload, files, pipeline, targets
 
 
 @asynccontextmanager
@@ -50,6 +50,7 @@ app.include_router(graphql_app, prefix="/graphql")
 app.include_router(locations.router, prefix="/api") # General locations, equivalent to a project
 app.include_router(jobs.router, prefix="/api")  # Jobs at a location. Organizes jobs for each project
 app.include_router(upload.router, prefix="/api") # Handles file uploads to server
+app.include_router(files.router, prefix="/api") # Handles file retreival
 app.include_router(pipeline.router, prefix="/api")
 app.include_router(targets.router, prefix="/api") # Handle targets associated with a job
 

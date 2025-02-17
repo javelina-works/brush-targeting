@@ -15,7 +15,8 @@
             "name": "Test Job 1",
             "id": "0b8dd912-c4a6-4bd1-882e-c182bf120065",
             "input_image_path": "backend/media\\locations\\6a9b0014-fa87-463d-9767-46cf5c762b9f\\0b8dd912-c4a6-4bd1-882e-c182bf120065\\0b8dd912-c4a6-4bd1-882e-c182bf120065_binary_mask.png",
-            "region_outline_path": "backend/media\\locations\\6a9b0014-fa87-463d-9767-46cf5c762b9f\\0b8dd912-c4a6-4bd1-882e-c182bf120065\\region_outline\\region_contour.geojson"
+            "region_outline_path": "backend/media\\locations\\6a9b0014-fa87-463d-9767-46cf5c762b9f\\0b8dd912-c4a6-4bd1-882e-c182bf120065\\region_outline\\region_contour.geojson",
+            "region_contour_path": "backend/media\\locations\\6a9b0014-fa87-463d-9767-46cf5c762b9f\\0b8dd912-c4a6-4bd1-882e-c182bf120065\\map\\region_contour.geojson"
         },
         {
             "location_id": "365d21b3-fc46-4c5b-aef4-736c59eb66e1",

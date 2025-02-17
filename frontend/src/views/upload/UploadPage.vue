@@ -27,7 +27,7 @@
     <GeoJsonUploader @upload-success="onGeoJsonUpload" :jobId="selectedJob.id"/>
 
     <!-- Leaflet Map -->
-    <div v-if="regionOutlinePath">
+    <div v-if="regionOutlineFile">
       <h2>Region Outline</h2>
       <div id="map" ref="mapContainer"></div>
     </div>
@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
 import { CButton } from '@coreui/vue';
 import api from '@/api/axios.js';
@@ -51,7 +51,7 @@ export default {
     const selectedJob = computed(() => locationStore.selectedJob);
 
     const orthophoto = ref(null);
-    const regionOutlinePath = ref(null);
+    const regionOutlineFile = ref(null);
     const map = ref(null);
     const mapContainer = ref(null);
     const uploading = ref(false);
@@ -85,15 +85,18 @@ export default {
       document.querySelector("[ref='orthophotoInput']").click();
     }
 
-    function onGeoJsonUpload(filePath) {
-      regionOutlinePath.value = filePath;
-      loadGeoJson(filePath);
+    // Triggered after region outline uploaded
+    function onGeoJsonUpload(filename) {
+      console.log("Uploaded file: ", filename);
+      regionOutlineFile.value = filename;
+      // regionOutlineFile.value = true;
+      loadGeoJson(filename);
     }
 
-    async function loadGeoJson(filePath) {
+    async function loadGeoJson(filename) {
       try {
-        const response = await fetch(filePath);
-        const geoJsonData = await response.json();
+        const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
+        const geoJsonData = await response.data;
         if (map.value) {
           L.geoJSON(geoJsonData).addTo(map.value);
         }
@@ -101,6 +104,14 @@ export default {
         console.error("Failed to load GeoJSON:", error);
       }
     }
+
+    watch(regionOutlineFile, (newFile) => {
+      if (newFile) {
+        nextTick(() => {
+          initMap();  // Reinitialize the map when regionOutlineFile updates
+        });
+      }
+    });
 
     function initMap() {
       if (!mapContainer.value) return;
@@ -124,7 +135,7 @@ export default {
       uploadFiles,
       handleFileSelectOrthophoto,
       triggerFileInputOrthophoto,
-      regionOutlinePath,
+      regionOutlineFile,
       mapContainer,
       onGeoJsonUpload,
     };
