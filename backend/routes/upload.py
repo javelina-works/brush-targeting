@@ -12,7 +12,6 @@ router = APIRouter()
 def upload_image(job_id: str, file: UploadFile = File(...)):
     data = load_data()
     job = next((j for j in data["jobs"] if j["id"] == job_id), None)
-
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 

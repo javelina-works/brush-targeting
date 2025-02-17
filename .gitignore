@@ -1,6 +1,10 @@
 # Ignore all uploaded orthophotos in the media directory
 backend/media/*/images/*
 
+# Ignore generated tile overview
+backend/media/*/tiles/*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
