@@ -10,6 +10,7 @@ import UploadPage from '@/views/upload/UploadPage.vue';
 import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/search/SearchPage.vue';
 import PlannerPage from '@/views/planner/PlannerPage.vue';
+import RoutesPage from '@/views/routes/RoutesPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
 const routes = [
@@ -24,6 +25,7 @@ const routes = [
         { path: '/search', name: "Target Search", component: SearchPage },
         { path: '/audit', name: "Target Audit", component: AuditPage },
         { path: '/planner', name: "Mission Planner", component: PlannerPage },
+        { path: '/trips', name: "Route Planner", component: RoutesPage },
         { path: '/:pathMatch(.*)*', component: NotFound }, // Catch-all 404
     ],
   },

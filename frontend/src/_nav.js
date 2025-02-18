@@ -47,5 +47,11 @@ export default [
     to: '/planner',
     icon: 'cil-cursor',
   },
+  {
+    component: 'CNavItem',
+    name: 'Trip Planner',
+    to: '/trips',
+    icon: 'cil-cursor',
+  },
  
 ]

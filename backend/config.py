@@ -11,8 +11,12 @@ DISPLAY_CRS = "EPSG:4326"
 REGION_ORTHOPHOTO = "region_orthophoto.tif"
 REGION_COG = "region_cog.tif"
 REGION_FILE = "region_contour.geojson"
+APPROVED_TARGETS_FILE = "approved_targets.geojson"
+REMOVED_TARGETS_FILE = "removed_targets.geojson"
 VORONOI_FILE = "voronoi_cells.geojson"
 DEPOT_FILE = "depot_points.geojson"
+MACRO_ROUTES_FILE = "macro_routes.geojson"
+MICRO_ROUTES_FILE = "micro_routes.geojson"
 
 # Base directory for all storage
 BASE_DIR = "backend/media"

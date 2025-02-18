@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import L, { geoJSON } from "leaflet";
+import L from "leaflet";
 import 'leaflet/dist/leaflet.css';
 import "@geoman-io/leaflet-geoman-free"; // Import Geoman
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
