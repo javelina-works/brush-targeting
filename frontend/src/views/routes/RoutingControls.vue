@@ -3,17 +3,17 @@
         <CCardHeader>Route Planning Settings</CCardHeader>
         <CCardBody>
 
-            <!-- Cell Size Slider -->
-            <label for="cell-size">Cell Area (Acres): {{ targetAreaAcres }}</label>
-            <CFormRange id="cell-size" :value="0.5" :min="0.25" :max="5" :step="0.25" v-model="targetAreaAcres" />
+            <!-- Num Vehicles Slider -->
+            <label for="vehicle-count">Routes Count: {{ vehiclesCount }}</label>
+            <CFormRange id="vehicle-count" :value="25" :min="15" :max="55" :step="1" v-model="vehiclesCount" />
 
             <!-- Iterations Slider -->
-            <label for="iterations">Iterations: {{ maxIterations }}</label>
-            <CFormRange id="iterations" :value="15" :min="3" :max="50" :step="1" v-model="maxIterations" />
+            <label for="drone-range">Drone Range (m): {{ maxDistance }}</label>
+            <CFormRange id="drone-range" :value="850" :min="250" :max="5000" :step="25" v-model="maxDistance" />
 
             <!-- Generate Button -->
-            <button @click="generateTessellation" :disabled="isGenerating">
-                {{ isGenerating ? "Generating..." : "Generate Voronoi Cells" }}
+            <button @click="solveRoutes" :disabled="isGenerating">
+                {{ isGenerating ? "Generating..." : "Generate Drone Routes" }}
             </button>
         </CCardBody>
     </CCard>
@@ -21,7 +21,7 @@
 
 <script>
 import { ref, computed } from "vue";
-import { useTessellationMutation } from "@/api/graphql_queries";
+import { useSolveRoutesMutation } from "@/api/graphql_queries";
 import { useLocationStore } from '@/stores/locationStore';
 import { updateLayerData } from "./layers";
 import {
@@ -37,46 +37,46 @@ export default {
         const isGenerating = ref(false);
 
         // 🟢 Default values (Floats & Integers)
-        const targetAreaAcresRaw = ref(0.5);
-        const maxIterationsRaw = ref(10);
+        const vehiclesCountRaw = ref(25);
+        const maxDistanceRaw = ref(850);
 
         // 🔹 Convert to STRING for API, but keep internal as numbers
-        const targetAreaAcres = computed({
-            get: () => String(targetAreaAcresRaw.value), // API receives a string
-            set: (value) => (targetAreaAcresRaw.value = parseFloat(value)), // Store as float internally
+        const vehiclesCount = computed({
+            get: () => String(vehiclesCountRaw.value), // API receives a string
+            set: (value) => (vehiclesCountRaw.value = parseInt(value, 10)), // Store as int internally
         });
 
-        const maxIterations = computed({
-            get: () => String(maxIterationsRaw.value), // API receives a string
-            set: (value) => (maxIterationsRaw.value = parseInt(value, 10)), // Store as int internally
+        const maxDistance = computed({
+            get: () => String(maxDistanceRaw.value), // API receives a string
+            set: (value) => (maxDistanceRaw.value = parseInt(value, 10)), // Store as int internally
         });
 
-        const { mutate: generateTessellationMutation } = useTessellationMutation();
+        const { mutate: generateRoutesSolution } = useSolveRoutesMutation();
 
 
 
-        const generateTessellation = async () => {
+        const solveRoutes = async () => {
             isGenerating.value = true;
 
-            const { data } = await generateTessellationMutation({
+            const { data } = await generateRoutesSolution({
                 locationId: locationId.value,
                 jobId: jobId.value,
-                targetAreaAcres: targetAreaAcresRaw.value, // As float
-                maxIterations: maxIterationsRaw.value // As Int
+                tNumVehicles: vehiclesCountRaw.value, // As int
+                maxDistance: maxDistanceRaw.value // As Int
             });
 
-            if (data?.generateTesselation?.geojson) {
-                updateLayerData("voronoi_cells", data.generateTesselation.geojson);
+            if (data?.solveRoutes?.geojson) {
+                updateLayerData("micro_routes", data.solveRoutes.geojson);
             }
 
             isGenerating.value = false;
         };
 
         return {
-            targetAreaAcres,
-            maxIterations,
+            vehiclesCount,
+            maxDistance,
             isGenerating,
-            generateTessellation,
+            solveRoutes,
         };
     },
 };

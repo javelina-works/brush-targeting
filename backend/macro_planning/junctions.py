@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # TODO: remove plant_search dependency
-from plant_search.macro_planning import calculate_intra_cell_workload
+from backend.macro_planning.macro_utils import calculate_intra_cell_workload
 
 
 def create_cells_depots_df(depots_gdf, cells_gdf, target_crs="EPSG:32613"):

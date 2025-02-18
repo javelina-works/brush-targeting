@@ -1,4 +1,5 @@
 import L, { circle } from "leaflet";
+import { geoJSON } from "leaflet";
 
 // 🔹 Store layers in an object (initialized as empty)
 const mapLayers = {};
@@ -83,6 +84,41 @@ export const layerFactory = {
             layer.bindPopup(`<b>Depot</b><br>ID: ${feature.properties.id}<br>Radius: ${feature.properties.depot_radius || 500}m`);
         },
     }),
+
+    micro_routes: () => {
+        function getRandomColor() {
+            return `#${Math.floor(Math.random()*16777215).toString(16)}`; // Random hex color
+        }
+        const routes_geojson = L.geoJSON(null, {
+            style: feature => ({ 
+                color: getRandomColor(), // Random hex color
+                weight: 2,
+                opacity: 1,
+                dashArray: (3,4),
+                fill: false, 
+            }),
+            onEachFeature: (feature, layer) => {
+                layer.on({
+                    mouseover: (e) => {
+                        e.target.setStyle({
+                            // color: "green",
+                            weight: 5, // Thicker when hovered
+                            dashArray: "", // Solid line when hovered
+                        });
+                    },
+                    mouseout: (e) => {
+                        e.target.setStyle({
+                            weight: 2,
+                            dashArray: (3,4),
+                        })
+                        // routes_geojson.resetStyle(e.target); // Reset to default style
+                    }
+                });
+            }
+        });
+        return routes_geojson;
+    },
+
     default: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "gray", radius: 5 }),
         onEachFeature: (feature, layer) => {

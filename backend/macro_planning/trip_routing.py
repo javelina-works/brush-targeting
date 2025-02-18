@@ -8,8 +8,8 @@ from pandas import concat
 
 
 # from visualize_routing import print_vehicle_details
-from macro_planning.visualize_routing import print_vehicle_details, plot_vrp_solution
-from macro_planning.junctions import (
+from backend.macro_planning.visualize_routing import print_vehicle_details, plot_vrp_solution
+from backend.macro_planning.junctions import (
     create_cells_depots_df, 
     create_cell_workloads_df
 )
@@ -35,7 +35,8 @@ def create_distance_matrix(cell_gdf, base_station_gdf, cell_workloads_df=None):
             if i == j:
                 continue # zero for self
 
-            dist = row_i.cell_centroid.distance(row_j.cell_centroid)
+            # dist = row_i.cell_centroid.distance(row_j.cell_centroid)
+            dist = row_i.geometry.centroid.distance(row_j.geometry.centroid)
             if workload_compensated:
                 workload_df = cell_workloads_df[cell_workloads_df['cell_id'] == row_j.cell_id]
                 dist += workload_df['workload'].iloc[0]
@@ -44,7 +45,8 @@ def create_distance_matrix(cell_gdf, base_station_gdf, cell_workloads_df=None):
 
     # Add depot distances
     for i, row in enumerate(cell_gdf.itertuples()):
-        dist_to_depot = depot_geometry.distance(row.cell_centroid)
+        # dist_to_depot = depot_geometry.distance(row.cell_centroid)
+        dist_to_depot = depot_geometry.distance(row.geometry.centroid)
         if workload_compensated:
             workload_df = cell_workloads_df[cell_workloads_df['cell_id'] == row.cell_id]
             dist_to_depot += workload_df['workload'].iloc[0]
@@ -182,7 +184,8 @@ def routes_to_gdf(station_cells_gdf, base_station_gdf, target_routes):
             for index in route:
                 if index < num_station_cells:
                     # Point from station_cells_gdf
-                    points.append(station_cells_gdf.iloc[index].cell_centroid)
+                    # points.append(station_cells_gdf.iloc[index].cell_centroid)
+                    points.append(station_cells_gdf.iloc[index].geometry.centroid)
                     cell_ids.append(station_cells_gdf.iloc[index]['cell_id'])
                 else:
                     # Must be base station

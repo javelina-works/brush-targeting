@@ -29,11 +29,10 @@
 <script>
 import L from "leaflet";
 import 'leaflet/dist/leaflet.css';
-import "@geoman-io/leaflet-geoman-free"; // Import Geoman
-import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 import { ref, watch, watchEffect, onMounted, computed } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
+import api from '@/api/axios.js';
 import { useMapData, updateMapData } from '@/api/graphql_queries';
 import { initializeLayers, updateLayerData, getAllLayers } from "./layers";
 
@@ -57,11 +56,11 @@ export default {
             "region_contour",
             "voronoi_cells",
             "depot_points",
+            "micro_routes",
         ]);
 
         // Load map assets
         const { result: getResult, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
-        const { mutate: updateMapAssets, error: updateError } = updateMapData();
 
         // Reactively process API data
         watch(
@@ -80,6 +79,36 @@ export default {
                 }
             });
 
+        
+        // Ensure tiles are loaded only when locationId and jobId are available
+        watch(
+            () => shouldQueryRun, 
+            (newValue, oldValue) => {
+                // console.log("shouldQueryRun changed:", oldValue, "→", newValue); // Debugging log
+                // console.log("New: ", newValue.value);
+                if (newValue) {
+                    loadRegionTiles();
+                }
+            },
+            { immediate: true } // ✅ Run immediately if shouldQueryRun is already true
+        );
+
+        async function loadRegionTiles() {
+            if (shouldQueryRun.value !== true) return; // Need both location and job IDs
+            try {
+                const response = await api.get(`/api/get_tile_url/?location_id=${locationId.value}&job_id=${jobId.value}`);
+                if (response.data.tile_url && map.value) {
+                    L.tileLayer(response.data.tile_url, {
+                        attribution: 'COG Tiles',
+                        maxZoom: 21,
+                        timeout: 3000, // 3 seconds
+                        crossOrigin: true,
+                    }).addTo(map.value);
+                }
+            } catch (error) {
+                console.warn("No COG tile available or error loading tiles:", error);
+            }
+        }
 
 
         // Initialize Leaflet map
@@ -91,23 +120,6 @@ export default {
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map.value);
             L.control.scale().addTo(map.value);
-            map.value.pm.addControls({
-                position: "topleft",
-                drawRectangle: true,
-                drawMarker: false,
-
-                drawCircleMarker: false,
-                drawCircle: false,
-                drawPolygon: false,
-                drawPolyline: false,
-                drawText: false,
-
-                removalMode: false, // We don't want to delete, just add to removed_targets
-                dragMode: true,
-                editMode: false,
-                rotateMode: false,
-                cutPolygon: false,
-            });
 
             initializeLayers(map.value); // Attach layers
         };

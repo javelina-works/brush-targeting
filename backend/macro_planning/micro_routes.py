@@ -137,7 +137,10 @@ def create_micro_routes_gdf(results, macro_routes_gdf, depot_point, depot_id):
 
         # Get the corresponding row in macro_routes_gdf for additional attributes
         macro_route_row = macro_routes_gdf[macro_routes_gdf['route_id'] == route_id].iloc[0]
-        route_cells = macro_route_row['route_cells']
+        # route_cells = macro_route_row['route_cells']
+
+        # Convert from np int64 to regular int
+        route_cells = [int(cell) for cell in macro_route_row['route_cells']]
 
         # Append data for the GeoDataFrame
         route_ids.append(route_id)

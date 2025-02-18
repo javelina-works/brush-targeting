@@ -47,6 +47,16 @@ const GENERATE_DEPOTS = gql`
   }
 `;
 
+const SOLVE_ROUTES = gql`
+  mutation getSolvedRoutes($locationId: String!, $jobId: String!, $numVehicles: Int, $maxDistance: Int) {
+      solveRoutes(locationId: $locationId, jobId: $jobId, tNumVehicles: $numVehicles, tMaxDistance: $maxDistance) {
+          id
+          name
+          type
+          geojson
+      }
+  }
+`
 
 
 // GraphQL API handlers
@@ -75,11 +85,19 @@ export function useTessellationMutation(locationId, jobId, targetAreaAcres, maxI
     });
 }
   
-  export function useDepotsMutation(locationId, jobId, depotRadius, gridDensity) {
-    return useMutation(GENERATE_DEPOTS, {
-        locationId, 
-        jobId,
-        depotRadius,
-        gridDensity
-    });
+export function useDepotsMutation(locationId, jobId, depotRadius, gridDensity) {
+  return useMutation(GENERATE_DEPOTS, {
+      locationId, 
+      jobId,
+      depotRadius,
+      gridDensity
+  });
+}
+
+export function useSolveRoutesMutation(locationId, jobId, tNumVehicles) {
+  return useMutation(SOLVE_ROUTES, {
+    locationId,
+    jobId,
+    tNumVehicles
+  })
 }
