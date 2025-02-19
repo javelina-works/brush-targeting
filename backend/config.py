@@ -22,6 +22,7 @@ MICRO_ROUTES_FILE = "micro_routes.geojson"
 CV_OUTPUT_FILE = "processed_region.tif"
 CV_OUTPUT_FILE_PNG = "processed_region.png"
 BINARY_MASK = "binary_mask.tif"
+BINARY_MASK_PNG = "binary_mask.png"
 
 # Base directory for all storage
 BASE_DIR = "backend/media"

@@ -1,15 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from pathlib import Path
 import cv2
+import os
+import uuid
 import numpy as np
 import json
-import os
 # import geojson
 from backend.config import (
-    LOCATIONS_DIR, load_data, REGION_ORTHOPHOTO, CV_OUTPUT_FILE, CV_OUTPUT_FILE_PNG,
-    BINARY_MASK, SEARCH_TARGETS_FILE,
+    LOCATIONS_DIR, load_data, save_data, REGION_ORTHOPHOTO, CV_OUTPUT_FILE, CV_OUTPUT_FILE_PNG,
+    BINARY_MASK, BINARY_MASK_PNG, SEARCH_TARGETS_FILE,
 )
 from backend.services.plant_search.load_image import load_image
 from backend.services.plant_search.image_preprocess import (
@@ -32,8 +33,8 @@ class ThresholdingRequest(BaseModel):
 class TargetGenerationRequest(BaseModel):
     job_id: str
 
-@router.post("/process_cv/{job_id}")
-async def process_cv(job_id: str) -> FileResponse:
+
+def process_cv_background(job_id: str, background_task_id: str):
     """
     Applies CV techniques to the job's orthophoto and saves output.
     """
@@ -54,17 +55,40 @@ async def process_cv(job_id: str) -> FileResponse:
     output_path = os.path.join(search_dir, CV_OUTPUT_FILE)
     png_path = os.path.join(search_dir, CV_OUTPUT_FILE_PNG)
 
-    # 3) Load image as NP array
+    # 3) Load and process image
     image, transform, bounds, image_crs = load_image(ortho_path)
-
-    # 4) Perform image thresholding
     processed_image = preprocess_image(image)
 
     # 5) Save processed image to correct directory
     cv2.imwrite(str(output_path), processed_image)
     cv2.imwrite(str(png_path), processed_image)
 
-    return FileResponse(png_path, media_type="image/png", filename=CV_OUTPUT_FILE_PNG)
+    # 6) Write outputs to file
+    job["completed_tasks"] = background_task_id
+    save_data(data)
+
+
+
+@router.post("/process_cv/{job_id}")
+async def process_cv(job_id: str, background_tasks: BackgroundTasks):
+    background_task_id = str(uuid.uuid4())
+    background_tasks.add_task(process_cv_background, job_id, background_task_id)
+    
+    return {"message": "Processing started", "task_id": background_task_id}
+    # return FileResponse(png_path, media_type="image/png", filename=CV_OUTPUT_FILE_PNG)
+
+
+@router.get("/check_status/{job_id}/{process_id}")
+async def check_status(job_id: str, process_id: str):
+    """ Checks if the processed image exists. """
+    data = load_data()
+    job = next((j for j in data["jobs"] if j["id"] == job_id), None)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if (job.get("completed_tasks", -1) == process_id):
+        return { "status": "complete", "task_id": process_id, "output_file": CV_OUTPUT_FILE_PNG }
+    return { "status": "processing", "task_id": process_id }
 
 
 @router.post("/apply_threshold")
@@ -83,17 +107,22 @@ async def apply_threshold(request: ThresholdingRequest):
     if not os.path.exists(processed_path):
         raise HTTPException(status_code=404, detail="Preprocessed image not found")
 
-    binary_mask_path = os.path.join(job_dir, "search", BINARY_MASK)
+    search_dir = os.path.join(job_dir, "search")
+    binary_mask_path = os.path.join(search_dir, BINARY_MASK)
+    binary_mask_png_path = os.path.join(search_dir, BINARY_MASK_PNG)
+
 
     # 3) Peform manual thresholding
     image = cv2.imread(str(processed_path), cv2.IMREAD_GRAYSCALE)
     binary_mask = threshold_image(image, request.threshold)
 
-    # 4) Save image to directory
+    # 4) Save image(s) to directory
     cv2.imwrite(str(binary_mask_path), binary_mask)
+    cv2.imwrite(str(binary_mask_png_path), binary_mask)
 
     # return {"message": "Thresholding applied", "output_path": str(binary_mask_path)}
-    return FileResponse(binary_mask_path, media_type="image/tif", filename=BINARY_MASK)
+    # return FileResponse(binary_mask_path, media_type="image/tif", filename=BINARY_MASK)
+    return FileResponse(binary_mask_png_path, media_type="image/png", filename=BINARY_MASK_PNG)
 
 
 

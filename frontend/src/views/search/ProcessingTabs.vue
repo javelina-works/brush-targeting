@@ -28,10 +28,10 @@
 
                         <CTabPanel class="p-3" itemKey="threshold">
                             <h4>Thresholding</h4>
-                            <!-- <CFormInput type="range" v-model="threshold" min="0" max="1" step="0.05" /> -->
-                            <p>Threshold: {{ threshold }}</p>
-                            <img v-if="thresholdedImage" :src="thresholdedImage" class="img-fluid" />
+                            <label for="threshold_range">Masking Threshold: {{ threshold }}</label>
+                            <CFormRange id="threshold_range" v-model="threshold" :min="0" :max="1" :step="0.01" />
                             <CButton color="warning" @click="applyThreshold">Apply Threshold</CButton>
+                            <img v-if="thresholdedImage" :src="thresholdedImage" class="img-fluid" />
                         </CTabPanel>
 
                         <CTabPanel class="p-3" itemKey="targets">
@@ -53,7 +53,7 @@ import api from '@/api/axios.js';
 import { useLocationStore } from '@/stores/locationStore';
 import {
     CTabs, CTabList, CTab, CTabContent, CTabPanel,
-    CButton, CFormInput,
+    CButton, CFormRange,
 } from '@coreui/vue';
 
 
@@ -68,47 +68,86 @@ export default {
         const processedImage = ref(null)
         const thresholdedImage = ref(null)
         const targets = ref(null)
-        const threshold = ref(0.5)
 
-        const fetchOriginalImage = async () => {
+        const thresholdRaw = ref(0.5)
+        // 🔹 Convert to STRING for API, but keep internal as numbers
+        const threshold = computed({
+            get: () => String(thresholdRaw.value), // API receives a string
+            set: (value) => (thresholdRaw.value = parseFloat(value)), // Store as float internally
+        });
+
+
+        const fetchImage = async (file_name) => {
             try {
-                const response = await api.get(`/api/files/${jobId.value}/region_orthophoto.png`, {
+                const response = await api.get(`/api/files/${jobId.value}/${file_name}`, {
                     responseType: 'blob' // Ensure treated as binary
                 });
                 if (response.status == 200) {
-                    console.log("Response: ", response);
-                    // originalImage.value = response.data; // Static path for now
-                    originalImage.value = URL.createObjectURL(response.data); // Static path for now
+                    const objectURL = URL.createObjectURL(response.data);
+                    return objectURL;
                 } else {
-                    console.error("Failed to fetch image.");
+                    console.error("Failed to fetch orgiginal image.");
+                    return null;
                 }
             } catch (error) {
                 console.error("File Retreival Error:", error);
             }
         }
 
+        const fetchOriginalImage = async () => {
+            try {
+                const image_name = "region_orthophoto.png";
+                originalImage.value = await fetchImage(image_name);
+            } catch (error) {
+                console.error("Error getting original:", error);
+            }
+        }
+
         const processCV = async () => {
             try {
-                const response = await api.post(`/api/process_cv/${jobId}`, { method: 'POST' })
-                if (response.ok) {
-                    processedImage.value = URL.createObjectURL(await response.blob())
+                const response = await api.post(`/api/process_cv/${jobId.value}`, { method: 'POST' })
+                if (response.status == 200) {
+                    console.log("Processing started, checking status... ", response.data["task_id"]);
+                    checkStatus(response.data["task_id"]);
                 } else {
-                    console.error("Failed to process CV")
+                    console.error("Failed to start processing image.");
                 }
             } catch (error) {
-                console.error("Error:", error)
+                console.error("Error:", error);
+            }
+        }
+
+        const checkStatus = async (task_id) => {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await api.get(`/api/check_status/${jobId.value}/${task_id}`);
+                    if (response.data.status === "complete") {
+                        clearInterval(interval);
+                        const produced_file = response.data.output_file;
+                        await fetchProcessedImage(produced_file);
+                    }
+                } catch (error) {
+                    console.error("Error checking status:", error);
+                }
+            }, 5000); // Poll every 5 seconds
+        };
+
+        const fetchProcessedImage = async (image_name = "processed_region.png") => {
+            try {
+                processedImage.value = await fetchImage(image_name);
+            } catch (error) {
+                console.error("Error getting processed:", error);
             }
         }
 
         const applyThreshold = async () => {
             try {
-                const response = await api.post("/api/apply_threshold", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ job_id: jobId, threshold: threshold.value })
-                })
-                if (response.ok) {
-                    thresholdedImage.value = URL.createObjectURL(await response.blob())
+                const response = await api.post("/api/apply_threshold", { 
+                    job_id: jobId.value, 
+                    threshold: parseFloat(threshold.value)
+                }, {responseType: 'blob'});
+                if (response.status == 200) {
+                    thresholdedImage.value = URL.createObjectURL(response.data)
                 } else {
                     console.error("Thresholding failed")
                 }
@@ -119,7 +158,7 @@ export default {
 
         const generateTargets = async () => {
             try {
-                const response = await api.post(`/api/generate_targets/${jobId}`, { method: 'POST' })
+                const response = await api.post(`/api/generate_targets/${jobId.value}`, { method: 'POST' })
                 if (response.ok) {
                     const data = await response.json()
                     targets.value = JSON.stringify(data.geojson, null, 2)
@@ -133,6 +172,7 @@ export default {
 
         onMounted(() => {
             fetchOriginalImage();
+            fetchProcessedImage();
         })
 
         return { originalImage, processedImage, thresholdedImage, targets, threshold, fetchOriginalImage, processCV, applyThreshold, generateTargets }
