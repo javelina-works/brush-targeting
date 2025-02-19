@@ -4,6 +4,7 @@ backend/media/*/images/*
 # Ignore generated tile overview
 backend/media/**/tiles/*
 backend/media/**/orthophoto/*
+backend/media/**/search/*
 
 
 # Byte-compiled / optimized / DLL files

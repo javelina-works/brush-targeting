@@ -2,16 +2,19 @@ import os
 import json
 from typing import Optional, Dict
 # import geopandas as gpd
-from backend.config import LOCATIONS_DIR, DATA_FILE, load_data, save_data
+from backend.config import (
+    LOCATIONS_DIR, SEARCH_TARGETS_FILE,
+    APPROVED_TARGETS_FILE, REMOVED_TARGETS_FILE,
+)
 
 def ensure_audit_files(job_path):
     """
     Helper function to `fetch_map_assets`, 
     """
        # Ensure `approved_targets.geojson` and `removed_targets.geojson` exist
-    targets_path = os.path.join(job_path, "targets.geojson")
-    approved_targets_path = os.path.join(job_path, "approved_targets.geojson")
-    removed_targets_path = os.path.join(job_path, "removed_targets.geojson")
+    targets_path = os.path.join(job_path, SEARCH_TARGETS_FILE)
+    approved_targets_path = os.path.join(job_path, APPROVED_TARGETS_FILE)
+    removed_targets_path = os.path.join(job_path, REMOVED_TARGETS_FILE)
 
     if os.path.exists(targets_path):
         with open(targets_path, "r", encoding="utf-8") as f:

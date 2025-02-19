@@ -1,7 +1,9 @@
 <template>
     <CAccordion>
         <CAccordionItem :item-key="1">
-            <CAccordionHeader><p><strong>Processing Pipeline:</strong> {{ selectedPipeline || 'None Selected' }}</p></CAccordionHeader>
+            <CAccordionHeader>
+                <p><strong>Processing Pipeline:</strong> {{ selectedPipeline || 'None Selected' }}</p>
+            </CAccordionHeader>
 
             <CAccordionBody>
 

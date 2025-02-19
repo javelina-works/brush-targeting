@@ -3,7 +3,7 @@
         {
             "name": "My First Pipeline",
             "id": "d7a0a2db-8048-45cc-ac64-5cc8be05cd31",
-            "stages": null
+            "stages": []
         },
         {
             "name": "Default Pipeline",

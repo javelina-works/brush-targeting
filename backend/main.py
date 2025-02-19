@@ -10,7 +10,7 @@ import strawberry
 from strawberry.fastapi import GraphQLRouter
 
 from backend.graphql.schema import schema
-from backend.routes import locations, jobs, upload, files, pipeline, targets, tiles
+from backend.routes import locations, jobs, upload, files, pipeline, targets, tiles, image_search
 
 
 @asynccontextmanager
@@ -53,8 +53,11 @@ app.include_router(jobs.router, prefix="/api")  # Jobs at a location. Organizes 
 app.include_router(upload.router, prefix="/api") # Handles file uploads to server
 app.include_router(files.router, prefix="/api") # Handles file retreival
 app.include_router(tiles.router, prefix="/api") # Tile generation and serving
-app.include_router(pipeline.router, prefix="/api")
+
 app.include_router(targets.router, prefix="/api") # Handle targets associated with a job
+app.include_router(pipeline.router, prefix="/api")
+app.include_router(image_search.router, prefix="/api") # Temporary API for image search
+
 
 # # Serve static files from the Vue build directory
 # app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")
