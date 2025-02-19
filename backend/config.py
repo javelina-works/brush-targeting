@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 PROCESSING_CRS = "EPSG:32613"
 DISPLAY_CRS = "EPSG:4326"
 REGION_ORTHOPHOTO = "region_orthophoto.tif"
+REGION_ORTHOPHOTO_PNG = "region_orthophoto.png"
 REGION_COG = "region_cog.tif"
 REGION_FILE = "region_contour.geojson"
 SEARCH_TARGETS_FILE = "targets.geojson"
@@ -19,6 +20,7 @@ DEPOT_FILE = "depot_points.geojson"
 MACRO_ROUTES_FILE = "macro_routes.geojson"
 MICRO_ROUTES_FILE = "micro_routes.geojson"
 CV_OUTPUT_FILE = "processed_region.tif"
+CV_OUTPUT_FILE_PNG = "processed_region.png"
 BINARY_MASK = "binary_mask.tif"
 
 # Base directory for all storage

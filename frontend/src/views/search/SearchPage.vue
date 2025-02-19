@@ -2,32 +2,18 @@
   <div class="flex">
 
     <!-- Pipeline Select & Manager -->
-    <PipelineManager />
+    <!-- <PipelineManager /> -->
 
     <!-- Sidebar: Processing Stages -->
     <div class="w-1/3 p-4 border-r">
       <h2 class="text-lg font-bold">Image Search Pipeline</h2>
       <p>Pipeline Name: {{ pipelineStore.pipelineName }} </p>
       <p>Pipeline ID: {{ pipelineStore.pipelineID }} </p>
-      <ul>
-        <li v-for="stage in pipelineStore.pipeline" 
-            :key="stage.id"
-            @click="selectStage(stage)"
-            class="cursor-pointer p-2 hover:bg-gray-200">
-          {{ stage.name }}
-        </li>
-      </ul>
     </div>
 
-    <!-- Main Panel: Parameter Editor -->
-    <div class="w-2/3 p-4">
-      <StageEditor v-if="selectedStage" :stage="selectedStage" />
-      <RunPipelineButton />
-    </div>
+    <!-- MVP Image Processing Tabs -->
+    <ProcessingTabs />
   </div>
-
-  <!-- Results -->
-  <StageResults />
 </template>
 
 
@@ -40,6 +26,7 @@ import PipelineManager from "./PipelineManager.vue";
 import StageEditor from "./StageEditor.vue";
 import RunPipelineButton from "./RunPipelineButton.vue";
 import StageResults from "./StageResults.vue";
+import ProcessingTabs from "./ProcessingTabs.vue";
 
 const pipelineStore = usePipelineStore();
 const selectedStage = ref(null);

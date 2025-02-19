@@ -8,7 +8,7 @@ import json
 import os
 # import geojson
 from backend.config import (
-    LOCATIONS_DIR, load_data, REGION_ORTHOPHOTO, CV_OUTPUT_FILE, 
+    LOCATIONS_DIR, load_data, REGION_ORTHOPHOTO, CV_OUTPUT_FILE, CV_OUTPUT_FILE_PNG,
     BINARY_MASK, SEARCH_TARGETS_FILE,
 )
 from backend.services.plant_search.load_image import load_image
@@ -52,6 +52,7 @@ async def process_cv(job_id: str) -> FileResponse:
     search_dir = os.path.join(job_dir, "search")
     os.makedirs(search_dir, exist_ok=True)
     output_path = os.path.join(search_dir, CV_OUTPUT_FILE)
+    png_path = os.path.join(search_dir, CV_OUTPUT_FILE_PNG)
 
     # 3) Load image as NP array
     image, transform, bounds, image_crs = load_image(ortho_path)
@@ -61,8 +62,9 @@ async def process_cv(job_id: str) -> FileResponse:
 
     # 5) Save processed image to correct directory
     cv2.imwrite(str(output_path), processed_image)
+    cv2.imwrite(str(png_path), processed_image)
 
-    return FileResponse(output_path, media_type="image/tif", filename=CV_OUTPUT_FILE)
+    return FileResponse(png_path, media_type="image/png", filename=CV_OUTPUT_FILE_PNG)
 
 
 @router.post("/apply_threshold")

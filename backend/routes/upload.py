@@ -1,9 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import os
+import cv2
+import numpy as np
 from backend.models.locations import Job
 from backend.config import ( 
     LOCATIONS_DIR, DATA_FILE, load_data, save_data, 
-    REGION_FILE, REGION_ORTHOPHOTO
+    REGION_FILE, REGION_ORTHOPHOTO, REGION_ORTHOPHOTO_PNG
 )
 
 router = APIRouter()
@@ -27,10 +29,12 @@ def upload_image(job_id: str, file: UploadFile = File(...)):
 
 
 @router.post("/upload/{job_id}/orthophoto")
-def upload_orthophoto(job_id: str, file: UploadFile = File(...)):
+async def upload_orthophoto(job_id: str, file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".tif", ".tiff", ".jpg", ".jpeg", ".png")):
         raise HTTPException(status_code=400, detail="Invalid file type for orthophoto")
     
+    file_bytes = await file.read() # raw image file bytes
+
     data = load_data()
     job = next((j for j in data["jobs"] if j["id"] == job_id), None)
     if not job:
@@ -41,9 +45,17 @@ def upload_orthophoto(job_id: str, file: UploadFile = File(...)):
     
     file_path = os.path.join(img_dir, REGION_ORTHOPHOTO)
     with open(file_path, "wb") as f:
-        f.write(file.file.read())
+        f.write(file_bytes)
+
+    png_path = os.path.join(img_dir, REGION_ORTHOPHOTO_PNG)
+    image_array = np.frombuffer(file_bytes, np.uint8) # Convert from bytes to NumPy array
+    tif_image = cv2.imdecode(image_array, cv2.IMREAD_UNCHANGED)  # Decode TIFF image
+    if tif_image is None:
+        raise HTTPException(status_code=500, detail="Failed to read TIFF file")
+    cv2.imwrite(str(png_path), tif_image)  # Save as PNG
     
     job["orthophoto_path"] = file_path
+    job["orthophoto_png_path"] = png_path
     save_data(data)
     
     return {"filename": REGION_ORTHOPHOTO, "path": file_path}

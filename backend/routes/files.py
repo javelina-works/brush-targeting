@@ -9,6 +9,7 @@ router = APIRouter()
 FILE_TYPES = {
     "geojson": "application/geo+json",
     "tiff": "image/tiff",
+    "tif": "image/tiff",
     "png": "image/png",
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg"
@@ -51,9 +52,10 @@ def get_uploaded_file(job_id: str, file_name: str):
 
     job_dir = os.path.join(LOCATIONS_DIR, job["location_id"], job_id)
     map_dir = os.path.join(job_dir, "map")
+    img_dir = os.path.join(job_dir, "orthophoto")
     
     # Search both the job directory and map directory for the requested file
-    for directory in [map_dir, job_dir]:
+    for directory in [map_dir, img_dir, job_dir]:
         file_path = os.path.join(directory, file_name)
         if os.path.exists(file_path):
             file_extension = file_name.split(".")[-1].lower()
