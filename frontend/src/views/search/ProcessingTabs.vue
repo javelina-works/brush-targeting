@@ -2,7 +2,8 @@
     <CContainer>
         <CRow class="mt-4">
             <CCol>
-                <CTabs activeItemKey="image">
+                <!-- <CTabs activeItemKey="image" @change="onTabChange"> -->
+                <CTabs activeItemKey="image" @change="(e) => console.log('Tab changed:', e)">
 
                     <CTabList variant="tabs">
                         <CTab itemKey="image">Original</CTab>
@@ -38,6 +39,8 @@
                             <h4>Detected Targets</h4>
                             <pre v-if="targets">{{ targets }}</pre>
                             <CButton color="danger" @click="generateTargets">Generate Targets</CButton>
+                            <CButton color="info" @click="activateMap">Refresh Map</CButton>
+                            <BaseLeafletMap ref="leafletMap" />
                         </CTabPanel>
                     </CTabContent>
 
@@ -48,34 +51,57 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import api from '@/api/axios.js';
 import { useLocationStore } from '@/stores/locationStore';
+import { useMapData } from '@/api/graphql_queries';
+
 import {
     CTabs, CTabList, CTab, CTabContent, CTabPanel,
     CButton, CFormRange,
 } from '@coreui/vue';
 
+import BaseLeafletMap from '@/components/LeafletMap/BaseLeafletMap.vue';
+import { updateLayerData, getAllLayers } from '@/components/LeafletMap/layers';
 
 export default {
+    components: { BaseLeafletMap, CTabs },
     setup() {
         const locationStore = useLocationStore();
         const locationId = computed(() => locationStore.selectedLocation?.id);
         const jobId = computed(() => locationStore.selectedJob?.id);
         const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
 
-        const originalImage = ref(null)
-        const processedImage = ref(null)
-        const thresholdedImage = ref(null)
-        const targets = ref(null)
+        const leafletMap = ref(null);
 
-        const thresholdRaw = ref(0.5)
+        const originalImage = ref(null);
+        const processedImage = ref(null);
+        const thresholdedImage = ref(null);
+        const targets = ref(null);
+
+        const thresholdRaw = ref(0.5);
         // 🔹 Convert to STRING for API, but keep internal as numbers
         const threshold = computed({
             get: () => String(thresholdRaw.value), // API receives a string
             set: (value) => (thresholdRaw.value = parseFloat(value)), // Store as float internally
         });
 
+        const layers = ref([
+            "region_contour",
+            
+        ]);
+        const { result: getResult, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
+
+        const activateMap = () => {
+            console.log("Refreshing map! ", leafletMap.value.map);
+            nextTick(() => {
+                if (leafletMap.value?.map) {
+                    leafletMap.value.map.invalidateSize();
+                }
+            });
+        };
+
+        /** API Calls and handling */
 
         const fetchImage = async (file_name) => {
             try {
@@ -142,10 +168,10 @@ export default {
 
         const applyThreshold = async () => {
             try {
-                const response = await api.post("/api/apply_threshold", { 
-                    job_id: jobId.value, 
+                const response = await api.post("/api/apply_threshold", {
+                    job_id: jobId.value,
                     threshold: parseFloat(threshold.value)
-                }, {responseType: 'blob'});
+                }, { responseType: 'blob' });
                 if (response.status == 200) {
                     thresholdedImage.value = URL.createObjectURL(response.data)
                 } else {
@@ -170,12 +196,46 @@ export default {
             }
         }
 
+
+        // Reactively process API data
+        watch(
+            () => getResult.value?.mapAssets,  // ✅ Only watches `mapAssets`
+            (newAssets, oldAssets) => {
+                if (error.value) {
+                    console.error("GraphQL error:", error.value);
+                }
+                if (loading.value) {
+                    console.log("Data is still loading...");
+                }
+                if (shouldQueryRun.value && newAssets) {
+                    newAssets.forEach((asset) => {
+                        updateLayerData(asset.name, asset.geojson);
+                        // if (asset.name === "voronoi_cells") hasVoronoiCells.value = true;
+                        // if (asset.name === "depot_points") hasDepots.value = true;
+                    });
+                }
+            });
+
+
         onMounted(() => {
             fetchOriginalImage();
             fetchProcessedImage();
         })
 
-        return { originalImage, processedImage, thresholdedImage, targets, threshold, fetchOriginalImage, processCV, applyThreshold, generateTargets }
+        return {
+            originalImage,
+            processedImage,
+            thresholdedImage,
+            targets,
+            threshold,
+            fetchOriginalImage,
+            processCV,
+            applyThreshold,
+            generateTargets,
+            BaseLeafletMap,
+            leafletMap,
+            activateMap,
+        }
     }
 }
 </script>
