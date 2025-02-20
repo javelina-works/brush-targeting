@@ -87,8 +87,8 @@ export default {
         });
 
         const layers = ref([
-            "region_contour",
-            
+            // "region_contour",
+            "targets",
         ]);
         const { result: getResult, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
 
@@ -218,7 +218,7 @@ export default {
 
 
         onMounted(() => {
-            fetchOriginalImage();
+            // fetchOriginalImage();
             fetchProcessedImage();
         })
 

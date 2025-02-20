@@ -9,6 +9,13 @@ export const layerFactory = {
         style: { color: "blue", weight: 2, fill: false, fillOpacity: 0.05 },
     }),
 
+    targets: () => L.geoJSON(null, {
+        pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "blue", radius: 5 }),
+        onEachFeature: (feature, layer) => {
+            layer.bindPopup(`<b>Detected Target</b><br>ID: ${feature.properties.id}`);
+        },
+    }),
+
     approved_targets: () => L.geoJSON(null, {
         pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "blue", radius: 5 }),
         onEachFeature: (feature, layer) => {
