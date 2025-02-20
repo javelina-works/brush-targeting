@@ -97,7 +97,7 @@ def convert_to_cog_rio(input_path: Path, output_path: Path):
     config = dict(
         BLOCKSIZE=256,  # Optimized for tile serving
         COMPRESS="DEFLATE",  # Lossless compression
-        OVERVIEWS=[2, 4, 8, 16, 19, 20, 21],  # Multi-level pyramid for fast zooming
+        OVERVIEWS=[2, 4, 8, 14, 16, 19, 20, 21],  # Multi-level pyramid for fast zooming
         OVERVIEW_RESAMPLING=Resampling.nearest.name,  # Use nearest for quick access
     )
 

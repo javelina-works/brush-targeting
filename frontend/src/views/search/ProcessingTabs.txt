@@ -93,37 +93,10 @@ export default {
         const { result: getResult, loading, error } = useMapData(locationId.value, jobId.value, layers.value);
 
         const activateMap = () => {
-            if (!leafletMap.value || !leafletMap.value.map) {
-                console.warn("Leaflet map is not ready yet.");
-                return;
-            }
-
             console.log("Refreshing map! ", leafletMap.value.map);
             nextTick(() => {
                 if (leafletMap.value?.map) {
                     leafletMap.value.map.invalidateSize();
-                }
-
-                // 🔹 Locate the `region_contour` GeoJSON layer
-                let regionLayer = null;
-
-                // Warning: this is SUPER inefficient, and gets worse with more targets
-                // Keeping for now, but we must bail on this later
-                leafletMap.value.map.eachLayer((layer) => {
-                    // console.log("Layer: ", layer); // Uncomment to see how inefficient this is
-                    if (layer instanceof L.GeoJSON) {
-                        if (layer.options?.style?.color === "blue") {  // Adjust color/style check if needed
-                            regionLayer = layer;
-                        }
-                    }
-                });
-
-                // 🔹 Focus the map on the `region_contour` bounds
-                if (regionLayer) {
-                    leafletMap.value.map.fitBounds(regionLayer.getBounds(), { padding: [20, 20] });
-                    console.log("Map focused on region_contour.");
-                } else {
-                    console.warn("Region contour layer not found.");
                 }
             });
         };
@@ -131,19 +104,7 @@ export default {
         /** API Calls and handling */
 
         const fetchImage = async (file_name) => {
-            if (!jobId.value || !file_name) {
-                console.error("Error: No job ID or file name for fetchImage");
-                return;
-            }
-
             try {
-                const fileExistsResponse = await api.get(`/api/files/${jobId.value}`);
-                if (!fileExistsResponse.data.images.includes(file_name)) {
-                    console.error("File does not exist:", file_name);
-                    return null;
-                }
-
-
                 const response = await api.get(`/api/files/${jobId.value}/${file_name}`, {
                     responseType: 'blob' // Ensure treated as binary
                 });
@@ -169,13 +130,8 @@ export default {
         }
 
         const processCV = async () => {
-            if (!jobId.value) {
-                console.error("Error: No job ID selected for processCV");
-                return;
-            }
-
             try {
-                const response = await api.post(`/api/process_cv/${jobId.value}`);
+                const response = await api.post(`/api/process_cv/${jobId.value}`, { method: 'POST' })
                 if (response.status == 200) {
                     console.log("Processing started, checking status... ", response.data["task_id"]);
                     checkStatus(response.data["task_id"]);
@@ -188,9 +144,6 @@ export default {
         }
 
         const checkStatus = async (task_id) => {
-            let retries = 0;
-            const maxRetries = 14; // Stop after N tries (70 seconds)
-
             const interval = setInterval(async () => {
                 try {
                     const response = await api.get(`/api/check_status/${jobId.value}/${task_id}`);
@@ -201,12 +154,6 @@ export default {
                     }
                 } catch (error) {
                     console.error("Error checking status:", error);
-                }
-
-                retries++;
-                if (retries >= maxRetries) {
-                    clearInterval(interval);
-                    console.warn("Max retries for checkStatus of id: ", task_id);
                 }
             }, 5000); // Poll every 5 seconds
         };
@@ -220,11 +167,6 @@ export default {
         }
 
         const applyThreshold = async () => {
-            if (!jobId.value) {
-                console.error("Error: No job ID selected for applyThreshold");
-                return;
-            }
-
             try {
                 const response = await api.post("/api/apply_threshold", {
                     job_id: jobId.value,
@@ -241,17 +183,11 @@ export default {
         }
 
         const generateTargets = async () => {
-            if (!jobId.value) {
-                console.error("Error: No job ID selected for generateTargets");
-                return;
-            }
-
             try {
-                const response = await api.post(`/api/generate_targets/${jobId.value}`, {
-                    timeout: 15000, // 15s to generate 
-                })
-                if (response.status === 200) {
-                    targets.value = JSON.stringify(response.data.geojson, null, 2);
+                const response = await api.post(`/api/generate_targets/${jobId.value}`, { method: 'POST' })
+                if (response.ok) {
+                    const data = await response.json()
+                    targets.value = JSON.stringify(data.geojson, null, 2)
                 } else {
                     console.error("Target generation failed")
                 }
@@ -282,11 +218,6 @@ export default {
 
 
         onMounted(() => {
-            if (!shouldQueryRun.value) {
-                console.warn("Location or Job ID not available. Skipping image pre-fetch.");
-                return;
-            }
-
             fetchOriginalImage();
             fetchProcessedImage();
         })

@@ -61,7 +61,17 @@ def get_uploaded_file(job_id: str, file_name: str):
         if os.path.exists(file_path):
             file_extension = file_name.split(".")[-1].lower()
             mime_type = FILE_TYPES.get(file_extension, "application/octet-stream")
-            return FileResponse(file_path, media_type=mime_type)
+            file_size = os.path.getsize(file_path)
+
+            return FileResponse(
+                file_path, 
+                media_type=mime_type,
+                filename=file_name,
+                headers={
+                    "Content-Length": str(file_size), # Browser understands total size
+                    "Cache-Control": "public, max-age=86400", # Enable client caching
+                }
+            )
     
     raise HTTPException(status_code=404, detail="File not found")
 

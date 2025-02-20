@@ -95,12 +95,13 @@ async def generate_tiles_stream_api(
 
 # [READ] Serve tiles from a given project
 @router.get("/tile/{location_id}/{job_id}/{z}/{x}/{y}.png")
-async def get_cog_tile(
+def get_cog_tile(
     location_id: str, 
     job_id: str, 
     z: int, x: int, y: int, 
     tile_size: int = 256
-) -> StreamingResponse:
+):
+# ) -> StreamingResponse | Response:
     """
     Serves tiles dynamically from a COG
     """
@@ -112,11 +113,15 @@ async def get_cog_tile(
 
     try:
         with Reader(cog_path) as cog:
-            tile_image  = cog.tile(x, y, z, tilesize=tile_size)
-            image_blob = tile_image.render(img_format="PNG")
-            buffer = BytesIO(image_blob)
-            buffer.seek(0)
-            return StreamingResponse(buffer, media_type="image/png")
+            # tile_image  = cog.tile(x, y, z, tilesize=tile_size)
+            # image_blob = tile_image.render(img_format="PNG")
+            # buffer = BytesIO(image_blob)
+            # buffer.seek(0)
+            # return StreamingResponse(buffer, media_type="image/png")
+
+            tile_image = cog.tile(x, y, z, tilesize=tile_size)
+            content = tile_image.render(img_format="PNG")
+            return Response(content, media_type="image/png")
         
     except TileOutsideBounds as oob:
         # Out of bounds, return a blank tile or a 404

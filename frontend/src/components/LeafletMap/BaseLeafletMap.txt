@@ -18,7 +18,6 @@ import api from '@/api/axios.js';
 const locationStore = useLocationStore();
 const selectedLocation = computed(() => locationStore.selectedLocation);
 const selectedJob = computed(() => locationStore.selectedJob);
-const shouldQueryRun = computed(() => !!selectedLocation.value?.id && !!selectedJob.value?.id );
 
 /** Map container reference */
 const mapContainer = ref(null);
@@ -37,25 +36,21 @@ const props = defineProps({
   },
 });
 
-const BACKEND_URL = "http://localhost:8000";
+
 
 async function loadRegionTiles() {
-  if (regionTilesLoaded.value) return; // Prevent duplicate calls if already setup
-
   try {
-    // const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);
-    // console.log("Response: ", response);
-    
-    // if (response.data.tile_url && map.value) {
-    if (map.value) {
-      const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
-      console.log("Adding tile layer: ", TILE_API);
-      // console.log("Adding region tile layer:", response.data.tile_url);
-      // L.tileLayer(response.data.tile_url, {
-      L.tileLayer(TILE_API, {
+    const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);
+    console.log("Response: ", response);
+    if (response.data.tile_url && map.value) {
+      // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
+      // console.log("Adding tile layer: ", TILE_API);
+      console.log("Adding region tile layer:", response.data.tile_url);
+      L.tileLayer(response.data.tile_url, {
         attribution: 'COG Tiles',
-        minZoom: 10,
         maxZoom: 21,
+        timeout: 3000, // 3 seconds
+        crossOrigin: true,
       }).addTo(map.value);
       regionTilesLoaded.value = true;
     }
@@ -67,8 +62,6 @@ async function loadRegionTiles() {
 
 
 async function loadGeoJson(filename) {
-  if (regionOutlineLoaded.value) return;  // ✅ Prevent duplicate calls
-
   try {
     // const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
     const response = await api.get(`api/files/${selectedJob.value.id}/region_contour.geojson`);
@@ -90,19 +83,18 @@ const initMap = () => {
   map.value = L.map(mapContainer.value, {
     center: props.center,
     zoom: props.zoom,
-    minZoom: 6,
     maxZoom: 21,
     zoomAnimation: false, // https://stackoverflow.com/a/66516334
     preferCanvas: true,
   });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    crossOrigin: true,
-  }).addTo(map.value);
+  // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  //   crossOrigin: true,
+  // }).addTo(map.value);
   L.control.scale().addTo(map.value);
 
   loadGeoJson();
-  loadRegionTiles();
+  // loadRegionTiles();
   initializeLayers(map.value);
   
   // Fix map sizing issues after a short delay
@@ -114,28 +106,15 @@ const initMap = () => {
 
 
 onMounted(() => {
-  if (!mapContainer.value) {
-    console.error("Map container not ready.");
-    return;
-  }
-  
-  if ( !shouldQueryRun.value ) {
-    console.warn("Location or Job ID not available. Skipping map init.");
-    return;
-  }
-
   initMap();
+  
 });
 
 onUnmounted(() => {
   if (map.value) {
-    map.value.off();
     map.value.remove();
     map.value = null;
   }
-
-  regionTilesLoaded.value = false;
-  regionOutlineLoaded.value = false;
 });
 
 /** Expose map instance */

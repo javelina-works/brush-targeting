@@ -1,10 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 from PIL import Image
 from io import BytesIO
+import time
+import logging
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
@@ -12,6 +15,9 @@ from strawberry.fastapi import GraphQLRouter
 from backend.graphql.schema import schema
 from backend.routes import locations, jobs, upload, files, pipeline, targets, tiles, image_search
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
@@ -42,6 +48,21 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
     allow_credentials=True,
 )
+
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=100_000, # Compress responses >100KB
+)  
+
+@app.middleware("http")
+async def log_request_time(request: Request, call_next):
+    start_time = time.time()  # ⏳ Start timing
+    response = await call_next(request)
+    elapsed_time = time.time() - start_time  # ⏱ Calculate duration
+
+    logger.info(f"{request.method} {request.url.path} - {elapsed_time:.3f}s")
+    return response
+
 
 # Mount GraphQL API
 graphql_app = GraphQLRouter(schema)
