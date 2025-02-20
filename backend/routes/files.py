@@ -67,6 +67,7 @@ def get_uploaded_file(job_id: str, file_name: str):
                 file_path, 
                 media_type=mime_type,
                 filename=file_name,
+                stat_result=os.stat(file_path),
                 headers={
                     "Content-Length": str(file_size), # Browser understands total size
                     "Cache-Control": "public, max-age=86400", # Enable client caching
