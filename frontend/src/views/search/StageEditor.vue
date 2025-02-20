@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, reactive, watch } from "vue";
+import { reactive, watch } from "vue";
 import { usePipelineStore } from "@/stores/pipeline";
 
 const props = defineProps(["stage"]);

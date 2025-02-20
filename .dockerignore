@@ -1,1 +1,15 @@
+# Ignore media files (they should be a volume instead)
+backend/media/*
+
+# Ignore common unnecessary files
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.vscode
+__pycache__/
+*.pyc
+*.pyo
+.env
 .venv/
+.venv
+.git

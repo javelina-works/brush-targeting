@@ -5,7 +5,7 @@ import App from './App.vue'
 import router from './router';
 
 import { ApolloClients, DefaultApolloClient } from "@vue/apollo-composable";
-import apolloClient from "./apollo";
+import apolloClient from "@/api/apollo";
 
 import CoreuiVue from '@coreui/vue'
 import CIcon from '@coreui/icons-vue'

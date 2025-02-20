@@ -1,4 +1,16 @@
-FROM python:3.11-slim
+# Stage 1: Build the Vue Frontend
+FROM node:18 AS frontend-builder
+WORKDIR /app
+COPY frontend/ .
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+RUN yarn install && yarn build
+
+
+# Stage 2: Set Up the FastAPI Backend
+FROM python:3.11-slim AS backend
+WORKDIR /app
+
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,15 +31,19 @@ COPY pyproject.toml poetry.lock README.md ./
 # Install package dependencies separate from our package
 RUN poetry install --no-root
 
-# Copy the application code
-COPY . /app
-WORKDIR /app
+# Copy built frontend files into the backend's static directory
+COPY --from=frontend-builder /app/dist frontend/dist
+
+# Copy backend files
+COPY backend/ ./backend/
+
+# Set environment variable to production
+ENV ENV=production
 
 # Install the project now that the full directory is available
-RUN poetry install --only main
+RUN poetry install --no-root
+
+EXPOSE 8000
 
 # Run the application
-CMD ["poetry", "run", "panel", "serve", "brush_targeting/main.py", "--port", "5006", "--allow-websocket-origin=*"]
-
-# Only if invoking Poetry's venv beforehand
-# CMD ["panel", "serve", "main.py", "--port", "5006", "--allow-websocket-origin=*"]
+CMD ["poetry", "run", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000" ]

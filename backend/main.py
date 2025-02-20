@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 from PIL import Image
 from io import BytesIO
+import os
 import time
 import logging
 
@@ -54,6 +55,7 @@ app.add_middleware(
     minimum_size=100_000, # Compress responses >100KB
 )  
 
+# Debugging response times of requests on server
 @app.middleware("http")
 async def log_request_time(request: Request, call_next):
     start_time = time.time()  # ⏳ Start timing
@@ -80,10 +82,25 @@ app.include_router(pipeline.router, prefix="/api")
 app.include_router(image_search.router, prefix="/api") # Temporary API for image search
 
 
-# # Serve static files from the Vue build directory
-# app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")
+# Serve static files from the Vue build directory
+"""
+Vue frontend static asset routing:
+In a nutshell, if FastAPI cannot find the route (unmatched), we send it to the Vue frontend.
+Since Vue handles routing on the client side, we just return index.html for any unmatched route.
+Once Vue gets the path, it will decide the correct page to produce. 
+
+That is also why the following does not work:
+`app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")`
+"""
+# if os.getenv("ENV") == "production":
+app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="static")
+
+@app.get("/{full_path:path}")
+async def serve_vue_app(full_path: str):
+    """Catch-all route to serve Vue index.html"""
+    return FileResponse("frontend/dist/index.html")
 
 
-@app.get("/")
-async def root():
-    return {"message": "Go to /graphql for the GraphQL API"}
+# @app.get("/")
+# async def root():
+#     return {"message": "Go to /graphql for the GraphQL API"}
