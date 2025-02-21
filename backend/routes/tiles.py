@@ -109,7 +109,7 @@ def get_cog_tile(
 
     if not os.path.exists(cog_path):
         logger.warning(f"File not found: {cog_path}")
-        return JSONResponse(content={"error": "COG not found"}, status_code=404)
+        return JSONResponse(content={"error": "COG not found. Have you already generated tiles?"}, status_code=404)
 
     try:
         with Reader(cog_path) as cog:

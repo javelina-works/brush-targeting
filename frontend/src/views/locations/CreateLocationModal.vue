@@ -33,7 +33,7 @@ export default {
     const locationName = ref('');
 
     async function createLocation() {
-      await api.post('/api/locations', { name: locationName.value });
+      await api.post('/api/locations/', { name: locationName.value });
       emit('created'); // Notify parent to refresh list
       emit('close'); // Close modal
     }

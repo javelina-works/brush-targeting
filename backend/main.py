@@ -20,6 +20,9 @@ from backend.routes import locations, jobs, upload, files, pipeline, targets, ti
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Get allowed frontend origin from environment variable
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:8000")  # Default for local dev
+
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
     """
@@ -45,7 +48,7 @@ app.add_middleware(
     CORSMiddleware,
     # allow_origins=["http://localhost:5173", "*"],  # Allow only your frontend origin
     allow_origins=["*"],  # Allow only your frontend origin
-    allow_methods=["GET", "POST", "DELETE"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
     allow_credentials=True,
 )

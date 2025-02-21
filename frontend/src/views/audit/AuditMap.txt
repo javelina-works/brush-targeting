@@ -1,135 +1,268 @@
 <template>
-    <div class="map-container" ref="mapContainer"></div>
+  <div class="map-container" ref="mapContainer"></div>
+  <button class="save-button" @click="saveTargets">Save Changes</button>
+  <button class="refresh-button" @click="refetch">Refresh Data</button>
+  <p v-if="savingStatus" class="status-message">{{ savingStatus }}</p>
 </template>
-  
-<script setup>
-  import { ref, watch, onMounted } from 'vue';
-  import L from 'leaflet';
-  import { useQuery } from '@vue/apollo-composable';
-  import gql from 'graphql-tag';
-  import 'leaflet/dist/leaflet.css';
-  
-  /** ✅ References */
-  const mapContainer = ref(null);
-  let map = null;
-  const geojsonLayers = {}; // Dictionary to store actual Leaflet layers
-  let layerControl = null;
-  
-  /** API Parameters */
-  const locationId = ref("6a9b0014-fa87-463d-9767-46cf5c762b9f");
-  const jobId = ref("0b8dd912-c4a6-4bd1-882e-c182bf120065");
-  const layers = ref([
-    "region_contour", 
-    "removed_targets",
-    "approved_targets"
-    ]);
-  
-  /** GraphQL Query */
-  const GET_MAP_ASSETS = gql`
-    query GetMapAssets($locationId: String!, $jobId: String!, $layers: [String!]) {
-      mapAssets(locationId: $locationId, jobId: $jobId, layers: $layers) {
-        id
-        name
-        geojson
-      }
-    }
-  `;
 
-    /** Fetch GeoJSON Data */
-    const { result } = useQuery(GET_MAP_ASSETS, {
-        locationId: locationId.value,
-        jobId: jobId.value,
-        layers: layers.value
+<script setup>
+import { ref, watch, onMounted, computed } from 'vue';
+import L from 'leaflet';
+import { useQuery, useMutation } from '@vue/apollo-composable';
+import gql from 'graphql-tag';
+import 'leaflet/dist/leaflet.css';
+import "@geoman-io/leaflet-geoman-free"; // Import Geoman
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+
+import { useLocationStore } from '@/stores/locationStore';
+import { useMapData, updateMapData } from '@/api/graphql_queries';
+import { 
+  initializeLayers, updateLayerData, mapLayers, 
+  moveFeature, getLayerProperties, getLayer,
+} from '@/components/LeafletMap/layers';
+
+/** ✅ References */
+const locationStore = useLocationStore();
+const locationId = computed(() => locationStore.selectedLocation?.id);
+const jobId = computed(() => locationStore.selectedJob?.id);
+const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
+
+const mapContainer = ref(null);
+let map = null;
+let layerControl = null;
+
+/** API Parameters */
+const layers = ref([
+  "region_contour",
+  "removed_targets",
+  "approved_targets"
+]);
+
+/** GraphQL Query */
+const { result: getResult, refetch, loading, error, onResult } = useMapData(locationId.value, jobId.value, layers.value);
+const { mutate: updateMapAssets, error: updateError } = updateMapData();
+
+const savingStatus = ref(null); // Update save message when button clicked
+
+
+async function saveTargets() {
+  savingStatus.value = "Saving...";
+  const geojsonLayers = getAllLayers();
+  const geojsonFiles = ["approved_targets", "removed_targets"]
+    .filter(layerName => geojsonLayers[layerName]) // Ensure layer exists
+    .map(layerName => ({
+      name: layerName,
+      geojson: JSON.stringify(geojsonLayers[layerName].toGeoJSON()),
+    }));
+
+  if (geojsonFiles.length === 0) {
+    savingStatus.value = "⚠️ No changes to save.";
+    return;
+  }
+
+  try {
+    const { data } = await updateMapAssets({
+      locationId: locationId.value,
+      jobId: jobId.value,
+      geojsonFiles: geojsonFiles
     });
 
-  
-  /** ✅ Initialize Leaflet Map */
-  onMounted(() => {
-    map = L.map(mapContainer.value).setView([30.2506, -103.6035], 14);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-  
-    L.control.scale().addTo(map);
-    layerControl = L.control.layers(null, {}).addTo(map);
-
-    console.log("✅ Map Initialized, waiting for API data...");
-  });
-
-
-const layerFactory = {
-    region_contour: () => L.geoJSON(null, {
-        style: { color: "blue", weight: 2, fillOpacity: 0.1 },
-    }),
-    approved_targets: () => L.geoJSON(null, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "blue", radius: 5 }),
-        onEachFeature: (feature, layer) => {
-        layer.bindPopup(`<b>Approved Target</b><br>ID: ${feature.properties.id}`);
-        },
-    }),
-    removed_targets: () => L.geoJSON(null, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "red", radius: 5 }),
-        onEachFeature: (feature, layer) => {
-        layer.bindPopup(`<b>Removed Target</b><br>ID: ${feature.properties.id}`);
-        },
-    }),
-    default: () => L.geoJSON(null, {
-        pointToLayer: (feature, latlng) => L.circleMarker(latlng, { color: "gray", radius: 5 }),
-        onEachFeature: (feature, layer) => {
-        layer.bindPopup(`<b>Unknown Layer</b><br>ID: ${feature.properties?.id || "N/A"}`);
-        },
-    }),
-};
-
-// Function to initialize layers
-function initLayers() {
-  Object.keys(layerFactory).forEach(name => {
-    geojsonLayers[name] = layerFactory[name]();
-    geojsonLayers[name].addTo(map); // Assuming `map` is your Leaflet instance
-  });
-}
-
-// Function to update a specific layer with new data
-function updateLayer(name, geojsonData) {
-  if (geojsonLayers[name]) {
-    geojsonLayers[name].clearLayers(); // Clear existing features
-    geojsonLayers[name].addData(geojsonData);
+    if (data.error) {
+      console.error("Error saving layers:", updateError);
+    }
+    if (updateError.value) {
+      console.error("Save API error:", updateError.value);
+      savingStatus.value = `⚠️ Some files failed: ${response.data.updateMapAssets.errorMessage}`;
+      alert("Failed to save layers!");
+    } else {
+      console.log("Layers successfully saved:", data);
+      savingStatus.value = "✅ All changes saved!";
+      // alert("Map layers saved successfully!");
+    }
+  } catch (err) {
+    console.error("❌ Save API call failed:", error);
+    alert("An unexpected error occurred while saving.");
   }
 }
 
-/** ✅ Watch for API Data and Update Layers */
-watch(result, (newData) => {
-  if (!newData || !newData.mapAssets) return;
-  console.log("📡 API Data Received:", newData.mapAssets);
 
-  newData.mapAssets.forEach(asset => {
-    try {
-      const parsedGeoJson = JSON.parse(asset.geojson); // ✅ Convert JSON string to object
-      const name = asset.name
+/** ✅ Initialize Leaflet Map */
+const initMap = () => {
+  map = L.map(mapContainer.value, {
+    minZoom: 6,
+    maxZoom: 21,
+    zoomAnimation: false, // https://stackoverflow.com/a/66516334
+  }).setView([30.2506, -103.6035], 14);
 
-      if (geojsonLayers[name]) {
-        updateLayer(name, parsedGeoJson);
-      } else {
-        // If a new layer type appears, initialize it dynamically
-        geojsonLayers[name] = (layerFactory[name] || layerFactory.default)();
-        geojsonLayers[name].addTo(map);
-        updateLayer(name, parsedGeoJson);
-        layerControl.addOverlay(geojsonLayers[name], name);
-      }
-    } catch (error) {
-      console.error(`❌ Error parsing GeoJSON for ${asset.name}:`, error);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  L.control.scale().addTo(map);
+
+  layerControl = L.control.layers(null, {}, {
+    sortLayers: true, // Custom sort for our layers
+    sortFunction: (a, b, a_name, b_name) => {
+      const layerPriority = ["region_contour", "approved_targets", "removed_targets"];
+
+      const indexA = layerPriority.indexOf(a_name);
+      const indexB = layerPriority.indexOf(b_name);
+      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    }
+  }).addTo(map);
+
+  map.pm.addControls({
+    position: "topleft",
+    drawRectangle: true,
+    drawMarker: false,
+
+    drawCircleMarker: false,
+    drawCircle: false,
+    drawPolygon: false,
+    drawPolyline: false,
+    drawText: false,
+
+    removalMode: false, // We don't want to delete, just add to removed_targets
+    dragMode: false,
+    editMode: false,
+    rotateMode: false,
+    cutPolygon: false,
+  });
+
+  map.on("pm:create", (e) => {
+    if (e.shape === "Rectangle") {
+      const bounds = e.layer.getBounds(); // Get bounding box
+      toggleTargetsInRegion(bounds);
+      map.removeLayer(e.layer); // Remove rectangle after selection
     }
   });
+
+  map.on("click", (e) => {
+    // console.log("🖱️ Map clicked at:", e.latlng);
+    addNewTarget(e.latlng);
+  });
+
+  initializeLayers(map);
+  console.log("✅ Map Initialized, waiting for API data...");
+};
+
+
+// Possibly the wrong way to go about this? Should we expose from the backend?
+// It feels like this is something that should by typed later on
+function getTargetSchema() {
+  const layersToCheck = ["approved_targets", "removed_targets"];
+
+  for (let layerName of layersToCheck) {
+    let schemaExample = getLayerProperties(layerName);
+    if (schemaExample !== {}) return schemaExample; // Return first found schema
+  }
+  return {}; // Default if no schema is found
+}
+
+function addNewTarget(latlng) {
+  const schema = getTargetSchema(); // Get existing properties structure
+  const newId = crypto.randomUUID(); // Generate a new UUID for target_id
+
+  const newFeature = {
+    type: "Feature",
+    properties: {
+      ...schema, // Copy all properties from existing targets
+      target_id: newId, // Ensure unique ID
+      addedByUser: true, // Optional flag
+    },
+    geometry: {
+      type: "Point",
+      coordinates: [latlng.lng, latlng.lat],
+    },
+  };
+
+  // Add to the approved_targets layer
+  const approvedTargetsLayer = getLayer("approved_targets");
+  approvedTargetsLayer.addData(newFeature);
+  console.log(`✅ Added new target at ${latlng.lat}, ${latlng.lng}`);
+
+  // TODO: Send to backend for persistence
+  //   updateBackend(newFeature, "approved_targets");
+}
+
+function toggleTargetsInRegion(bounds) {
+  const featuresToMove = []; // Store features and their target layers
+  const layersToCheck = ["approved_targets", "removed_targets"];
+
+  layersToCheck.forEach((fromLayer) => {
+    const checkLayer = getLayer(fromLayer);
+    if (!checkLayer) {
+      console.warn("Cannot move targets from layer: ", fromLayer);
+      return;
+    } 
+
+    const toLayer = (fromLayer === "approved_targets") ? "removed_targets" : "approved_targets";
+    checkLayer.eachLayer((layer) => {
+      if (layer.feature && layer.getLatLng) {
+        const latlng = layer.getLatLng();
+        if (bounds.contains(latlng)) {
+          featuresToMove.push({ feature: layer.feature, fromLayer, toLayer });
+        }
+      }
+    });
+  });
+
+  // Now move all collected features in one step
+  featuresToMove.forEach(({ feature, fromLayer, toLayer }) => {
+    moveFeature(feature, fromLayer, toLayer);
+  });
+}
+
+
+
+/** ✅ Watch for API Data and Update Layers */
+onResult((newAssets) => {
+  console.log("📡 API Data Received:", newAssets);
+  
+  if (error.value) {
+    console.error("GraphQL error:", error.value);
+  }
+  if (loading.value) {
+    console.log("Data is still loading...");
+  }
+
+  if (!newAssets.data || !newAssets.data.mapAssets) return;
+  if (shouldQueryRun.value && newAssets) {
+    newAssets.data.mapAssets.forEach((asset) => {
+      updateLayerData(asset.name, asset.geojson);
+      layerControl.addOverlay(mapLayers[asset.name], asset.name); // TODO: not sure we want to export mapLayers const
+    });
+  }
 });
 
 
+onMounted(initMap);
+
 </script>
-  
-  <style scoped>
-  .map-container {
-    width: 100%;
-    height: 100vh;
-  }
+
+<style scoped>
+.map-container {
+  width: 100%;
+  height: 75vh;
+}
+
+.save-button {
+  padding: 8px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.status-message {
+  font-size: 14px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
 </style>
-  

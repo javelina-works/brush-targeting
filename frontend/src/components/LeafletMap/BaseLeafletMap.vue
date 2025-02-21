@@ -37,22 +37,18 @@ const props = defineProps({
   },
 });
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function loadRegionTiles() {
   if (regionTilesLoaded.value) return; // Prevent duplicate calls if already setup
 
   try {
-    // const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);
-    // console.log("Response: ", response);
-    
-    // if (response.data.tile_url && map.value) {
-    if (map.value) {
-      const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
-      console.log("Adding tile layer: ", TILE_API);
-      // console.log("Adding region tile layer:", response.data.tile_url);
-      // L.tileLayer(response.data.tile_url, {
-      L.tileLayer(TILE_API, {
+    const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);    
+    if (response.data.tile_url && map.value) {
+      // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
+      // console.log("Adding tile layer: ", TILE_API);
+      console.log("Adding region tile layer:", response.data.tile_url);
+      L.tileLayer(response.data.tile_url, {
         attribution: 'COG Tiles',
         minZoom: 10,
         maxZoom: 21,
