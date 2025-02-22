@@ -14,30 +14,6 @@ import { useLocationStore } from '@/stores/locationStore';
 import { useMapData, updateMapData } from "@/api/graphql_queries";
 import api from '@/api/axios.js';
 
-/** Location and Job reference setup */
-const locationStore = useLocationStore();
-const locationId = computed(() => locationStore.selectedLocation?.id);
-const jobId = computed(() => locationStore.selectedJob?.id);
-const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
-
-/** Map API query setups */
-const layers = ref([
-  "region_contour",
-  "removed_targets",
-  "approved_targets"
-]);
-const { result: getResult, refetch, loading, error, onResult } = useMapData(locationId.value, jobId.value, layers.value);
-const { mutate: updateMapAssets, error: updateError } = updateMapData();
-
-/** Map container reference */
-const mapContainer = ref(null);
-const map = ref(null);
-const layerControl = ref(null);
-const mapLayers = ref({}); // Store all layers for easy access
-
-const regionTilesLoaded = ref(false);
-const regionOutlineLoaded = ref(false);
-
 const props = defineProps({
   center: {
     type: Array,
@@ -47,27 +23,52 @@ const props = defineProps({
     type: Number,
     default: 14,
   },
+  layers: {
+    type: Array,
+    default: () => [ "region_contour", ], // Always start with region outline
+  }
 });
+
+/** Location and Job reference setup */
+const locationStore = useLocationStore();
+const locationId = computed(() => locationStore.selectedLocation?.id);
+const jobId = computed(() => locationStore.selectedJob?.id);
+const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
+
+/** Map API query setups */
+const { result: getResult, refetch, loading, error, onResult } = useMapData(locationId.value, jobId.value, props.layers);
+const { mutate: updateMapAssets, error: updateError } = updateMapData();
+
+/** Map container reference */
+const mapContainer = ref(null); // Connect map to div
+const map = ref(null); // Holds ref to actual map & layers
+const layerControl = ref(null);
+const mapLayers = ref({}); // Store all layers for easy access
+
+const regionTilesLoaded = ref(false);
 
 /** Load and Apply API Data to Map */
 watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
   if (!newLayerControl || !newMapLayers) return;
 
   onResult((newAssets) => {
+    console.log("📡 Map data updated:", newAssets);
+
+    if (error.value) {
+      console.error("GraphQL error:", error.value);
+    }
+    if (loading.value) {
+      console.log("Data is still loading...");
+    }
+    
     if (!newAssets?.data?.mapAssets) return;
+    if (!layerControl.value || !mapLayers.value) return;
 
     newAssets.data.mapAssets.forEach((asset) => {
-      if (!layerControl.value || !mapLayers.value) return;
-
-      // Remove old layer if it exists
       if (mapLayers.value[asset.name]) {
         layerControl.value.removeLayer(mapLayers.value[asset.name]);
       }
-
-      // Update the layer with new GeoJSON data
       updateLayerData(asset.name, asset.geojson);
-
-      // Add new layer to the map
       layerControl.value.addOverlay(mapLayers.value[asset.name], asset.name);
     });
   });
@@ -98,25 +99,6 @@ async function loadRegionTiles() {
   }
 }
 
-async function loadGeoJson(filename) {
-  if (regionOutlineLoaded.value) return;  // ✅ Prevent duplicate calls
-
-  try {
-    // const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
-    const response = await api.get(`api/files/${jobId.value}/region_contour.geojson`);
-    
-    if (response.data && map.value) {
-      const geoJsonLayer = L.geoJSON(response.data, {
-        style: { color: "blue", weight: 2, fill: false, }
-      }).addTo(map.value);
-      map.value.fitBounds(geoJsonLayer.getBounds());
-      regionOutlineLoaded.value = true;
-    }
-  } catch (error) {
-    console.error("Failed to load GeoJSON:", error);
-  }
-}
-
 /** Initialize Leaflet Map */
 const initMap = () => {
   map.value = L.map(mapContainer.value, {
@@ -137,8 +119,7 @@ const initMap = () => {
   initializeLayers(map.value);
   mapLayers.value = getAllLayers(); // Ensure we can access all layers
 
-  loadGeoJson();
-  loadRegionTiles();
+  // loadRegionTiles();
   
   layerControl.value = L.control.layers(null, {}, { sortLayers: true }).addTo(map.value);
 
@@ -172,7 +153,6 @@ onUnmounted(() => {
   }
 
   regionTilesLoaded.value = false;
-  regionOutlineLoaded.value = false;
 });
 
 /** Expose map instance */

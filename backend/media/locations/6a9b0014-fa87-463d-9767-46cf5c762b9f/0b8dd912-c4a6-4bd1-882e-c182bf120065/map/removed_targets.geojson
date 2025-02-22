@@ -1,4 +1,53 @@
 {
     "type": "FeatureCollection",
-    "features": []
+    "features": [
+        {
+            "id": "142",
+            "type": "Feature",
+            "properties": {
+                "target_id": "81e0ee30-5340-4657-a5be-e19d072cc6ce",
+                "region_outline_version": "0b8dd912-c4a6-4bd1-882e-c182bf120065",
+                "region_name": "Test Job 1"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.598285,
+                    30.250068
+                ]
+            }
+        },
+        {
+            "id": "202",
+            "type": "Feature",
+            "properties": {
+                "target_id": "39d19fda-e5ee-4786-9db6-7d7aa43fdd27",
+                "region_outline_version": "0b8dd912-c4a6-4bd1-882e-c182bf120065",
+                "region_name": "Test Job 1"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.59909,
+                    30.249933
+                ]
+            }
+        },
+        {
+            "id": "310",
+            "type": "Feature",
+            "properties": {
+                "target_id": "bda2a72a-cae4-4e2c-8805-a10254572df3",
+                "region_outline_version": "0b8dd912-c4a6-4bd1-882e-c182bf120065",
+                "region_name": "Test Job 1"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.598299,
+                    30.24915
+                ]
+            }
+        }
+    ]
 }

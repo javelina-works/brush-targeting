@@ -1,27 +1,22 @@
 <template>
-  <!-- <div class="map-container" ref="mapContainer"></div> -->
-  <BaseLeafletMap ref="baseMap" />
-
-  <button class="save-button" @click="saveTargets">Save Changes</button>
-  <button class="refresh-button" @click="refetch">Refresh Data</button>
-  <p v-if="savingStatus" class="status-message">{{ savingStatus }}</p>
+  <BaseLeafletMap ref="baseMap" :layers="layers" />
+  <RefreshMapData :baseMap="baseMap" />
+  <SaveMapLayers :baseMap="baseMap" :locationId="locationId" :jobId="jobId" :layersToSave="saveLayers" />
 </template>
 
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import "@geoman-io/leaflet-geoman-free"; // Import Geoman
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 import { useLocationStore } from '@/stores/locationStore';
 import {
-  initializeLayers, updateLayerData,
   moveFeature, getLayerProperties, getLayer,
 } from '@/components/LeafletMap/layers/layers';
 
-import { useMapLayers, useSaveMapLayers } from '@/components/LeafletMap/layers/layerManager';
 import BaseLeafletMap from '@/components/LeafletMap/BaseLeafletMap.vue';
+import SaveMapLayers from '@/components/LeafletMap/SaveMapLayers.vue';
+import RefreshMapData from '@/components/LeafletMap/RefreshMapData.vue';
 
 /** ✅ Reference to the Base Map Component */
 const baseMap = ref(null);
@@ -35,7 +30,6 @@ const layerControl = computed(() => baseMap.value?.layerControl);
 const locationStore = useLocationStore();
 const locationId = computed(() => locationStore.selectedLocation?.id);
 const jobId = computed(() => locationStore.selectedJob?.id);
-const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
 
 /** API Parameters */
 const layers = ref([
@@ -49,23 +43,6 @@ const saveLayers = ref([
   "removed_targets"
 ]);
 
-/** ✅ Use our new composable function to manage map data */
-// const { loading, error, refetch } = useMapLayers(
-//   locationId.value, jobId.value, layers, layerControl, mapLayers
-// )
-
-const { saveMapLayers, savingStatus, updateError } = useSaveMapLayers(
-  locationId.value, jobId.value, saveLayers,
-);
-
-async function refreshData() {
-  await map.value.refetch;
-}
-
-async function saveTargets() {
-  await saveMapLayers(locationId.value, jobId.value, saveLayers.value);
-}
-
 
 const addMapControls = () => {
   if (!map.value || !layerControl.value) {
@@ -73,6 +50,7 @@ const addMapControls = () => {
     return;
   }
 
+  // // map.value.removeLayer(layerControl.value);
   // layerControl.value = L.control.layers(null, {}, {
   //   sortLayers: true, // Custom sort for our layers
   //   sortFunction: (a, b, a_name, b_name) => {
@@ -87,8 +65,8 @@ const addMapControls = () => {
   map.value.pm.addControls({
     position: "topleft",
     drawRectangle: true,
-    
-    drawCircleMarker: false, drawCircle: false, drawPolygon: false, 
+
+    drawCircleMarker: false, drawCircle: false, drawPolygon: false,
     drawPolyline: false, drawText: false, drawMarker: false,
     removalMode: false, // We don't want to delete, just add to removed_targets
     dragMode: false, editMode: false, rotateMode: false, cutPolygon: false,
@@ -185,36 +163,9 @@ onMounted(() => {
     return;
   }
 
-  // addMapControls(); 
-
+  addMapControls();
 });
 
 </script>
 
-<style scoped>
-.map-container {
-  width: 100%;
-  height: 75vh;
-}
-
-.save-button {
-  padding: 8px 12px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.save-button:hover {
-  background-color: #218838;
-}
-
-.status-message {
-  font-size: 14px;
-  color: white;
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 5px 10px;
-  border-radius: 5px;
-}
-</style>
+<style scoped></style>
