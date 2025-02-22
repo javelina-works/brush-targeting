@@ -2,27 +2,39 @@
   <div>
     <div id="map" class="map-container" ref="mapContainer"></div>
   </div>
-  <!-- <h1>Testing</h1> -->
 </template>
 
 <script setup>
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { initializeLayers, updateLayerData, getAllLayers } from "./layers";
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { initializeLayers, updateLayerData, getAllLayers } from "./layers/layers";
 import { useLocationStore } from '@/stores/locationStore';
+import { useMapData, updateMapData } from "@/api/graphql_queries";
 import api from '@/api/axios.js';
 
-
+/** Location and Job reference setup */
 const locationStore = useLocationStore();
-const selectedLocation = computed(() => locationStore.selectedLocation);
-const selectedJob = computed(() => locationStore.selectedJob);
-const shouldQueryRun = computed(() => !!selectedLocation.value?.id && !!selectedJob.value?.id );
+const locationId = computed(() => locationStore.selectedLocation?.id);
+const jobId = computed(() => locationStore.selectedJob?.id);
+const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
+
+/** Map API query setups */
+const layers = ref([
+  "region_contour",
+  "removed_targets",
+  "approved_targets"
+]);
+const { result: getResult, refetch, loading, error, onResult } = useMapData(locationId.value, jobId.value, layers.value);
+const { mutate: updateMapAssets, error: updateError } = updateMapData();
 
 /** Map container reference */
 const mapContainer = ref(null);
 const map = ref(null);
+const layerControl = ref(null);
+const mapLayers = ref({}); // Store all layers for easy access
+
 const regionTilesLoaded = ref(false);
 const regionOutlineLoaded = ref(false);
 
@@ -37,13 +49,39 @@ const props = defineProps({
   },
 });
 
+/** Load and Apply API Data to Map */
+watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
+  if (!newLayerControl || !newMapLayers) return;
+
+  onResult((newAssets) => {
+    if (!newAssets?.data?.mapAssets) return;
+
+    newAssets.data.mapAssets.forEach((asset) => {
+      if (!layerControl.value || !mapLayers.value) return;
+
+      // Remove old layer if it exists
+      if (mapLayers.value[asset.name]) {
+        layerControl.value.removeLayer(mapLayers.value[asset.name]);
+      }
+
+      // Update the layer with new GeoJSON data
+      updateLayerData(asset.name, asset.geojson);
+
+      // Add new layer to the map
+      layerControl.value.addOverlay(mapLayers.value[asset.name], asset.name);
+    });
+  });
+}, { immediate: true });
+
+
+
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function loadRegionTiles() {
   if (regionTilesLoaded.value) return; // Prevent duplicate calls if already setup
 
   try {
-    const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);    
+    const response = await api.get(`/api/get_tile_url/?location_id=${locationId.value}&job_id=${jobId.value}`);    
     if (response.data.tile_url && map.value) {
       // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
       // console.log("Adding tile layer: ", TILE_API);
@@ -60,14 +98,12 @@ async function loadRegionTiles() {
   }
 }
 
-
-
 async function loadGeoJson(filename) {
   if (regionOutlineLoaded.value) return;  // ✅ Prevent duplicate calls
 
   try {
     // const response = await api.get(`api/files/${selectedJob.value.id}/${filename}`);
-    const response = await api.get(`api/files/${selectedJob.value.id}/region_contour.geojson`);
+    const response = await api.get(`api/files/${jobId.value}/region_contour.geojson`);
     
     if (response.data && map.value) {
       const geoJsonLayer = L.geoJSON(response.data, {
@@ -95,12 +131,17 @@ const initMap = () => {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     crossOrigin: true,
   }).addTo(map.value);
+  
   L.control.scale().addTo(map.value);
+
+  initializeLayers(map.value);
+  mapLayers.value = getAllLayers(); // Ensure we can access all layers
 
   loadGeoJson();
   loadRegionTiles();
-  initializeLayers(map.value);
   
+  layerControl.value = L.control.layers(null, {}, { sortLayers: true }).addTo(map.value);
+
   // Fix map sizing issues after a short delay
   setTimeout(() => {
     map.value.invalidateSize();
@@ -135,7 +176,8 @@ onUnmounted(() => {
 });
 
 /** Expose map instance */
-defineExpose({ map });
+defineExpose({ map, mapLayers, layerControl, refetch });
+
 </script>
 
 <style scoped>
