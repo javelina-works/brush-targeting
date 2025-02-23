@@ -121,6 +121,11 @@ def convert_to_cog_rio(input_path: Path, output_path: Path):
         if not valid_cogeo(temp_output):
             raise ValueError("❌ COG validation failed! The file is not a valid COG.")
 
+         # Ensure the output file doesn't already exist (FIX)
+        if os.path.exists(output_path):
+            logger.warning(f"⚠️ Existing COG found. Deleting before overwriting: {output_path}")  
+            os.unlink(output_path) # Remove existing file
+
         # Move the temp file to the final destination
         temp_output.rename(output_path)
 
@@ -128,5 +133,6 @@ def convert_to_cog_rio(input_path: Path, output_path: Path):
     
     except Exception as e:
         logger.error(f"❌ COG conversion failed: {e}")
-        temp_output.unlink(missing_ok=True)  # Remove the temp file if conversion fails
+        if os.path.exists(temp_output):
+            os.unlink(temp_output)  # Remove the temp file if conversion fails
         raise

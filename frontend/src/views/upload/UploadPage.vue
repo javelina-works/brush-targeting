@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, watch, } from 'vue';
 
 import api from '@/api/axios.js';
 import { useLocationStore } from '@/stores/locationStore';
@@ -33,15 +33,15 @@ import RefreshMapData from '@/components/LeafletMap/RefreshMapData.vue';
 import GeoJsonUploader from './GeoJsonUploader.vue';
 import OrthophotoUploader from './OrthophotoUploader.vue';
 
-/** ✅ References */
+/** References */
 const locationStore = useLocationStore();
 const selectedLocation = computed(() => locationStore.selectedLocation);
 const selectedJob = computed(() => locationStore.selectedJob);
 
-/** ✅ Reference to the Base Map Component */
+/** Reference to the Base Map Component */
 const baseMap = ref(null);
 
-/** ✅ Wait for `BaseLeafletMap` to be ready */
+/** 🚥 Wait for `BaseLeafletMap` to be ready */
 const map = computed(() => baseMap.value?.map);
 const refetch = computed(() => baseMap.value?.refetch);
 // const mapLayers = computed(() => baseMap.value?.mapLayers);
@@ -57,9 +57,8 @@ watch([regionTilesLoaded], ([outline, tiles]) => {
 });
 
 function onOrthophotoUpload(filename) {
-  console.log("Uploaded orthophoto: ", filename);
+  // console.log("Uploaded orthophoto: ", filename);
   regionTilesLoaded.value = true;
-  // TODO: begin tiling region image
   loadRegionTiles();
 }
 
@@ -92,12 +91,11 @@ async function onGeoJsonUpload() {
     }
 
     try {
-        await refetch.value();
+        await refetch.value(); // Refresh all geoJSON layers
     } catch (err) {
         console.error("❌ Refresh API call failed:", err);
     }
 }
-
 
 </script>
 
