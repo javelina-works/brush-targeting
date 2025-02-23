@@ -35,13 +35,16 @@ const showAlert = () => {
     isVisible.value = true;
     progress.value = 0;
 
+    const refreshTimout = 250; // ms between refreshing
+    const incrementOffset = 1000 / refreshTimout;
+
     let interval = setInterval(() => {
-        progress.value += 100 / props.duration;
+        progress.value += (100 / (props.duration * incrementOffset));
         if (progress.value >= 100) {
             clearInterval(interval);
             isVisible.value = false;
         }
-    }, 250);
+    }, refreshTimout);
 };
 
 watch(() => props.message, (newMessage) => {

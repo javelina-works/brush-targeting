@@ -17,7 +17,7 @@ import api from '@/api/axios.js';
 const props = defineProps({
   center: {
     type: Array,
-    default: () => [30.25065, -103.60355], // Default: Out in Alpine
+    default: () => [30.25065, -103.60355], // Default location: Out in Alpine
   },
   zoom: {
     type: Number,
@@ -56,12 +56,8 @@ watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
   onResult((newAssets) => {
     // console.log("📡 Map data updated:", newAssets);
 
-    if (error.value) {
-      console.error("GraphQL error:", error.value);
-    }
-    if (loading.value) {
-      console.log("Data is still loading...");
-    }
+    if (error.value)   { console.error("GraphQL error:", error.value); }
+    if (loading.value) { console.log("Data is still loading..."); }
     
     if (!newAssets?.data?.mapAssets) return;
     if (!layerControl.value || !mapLayers.value) return;

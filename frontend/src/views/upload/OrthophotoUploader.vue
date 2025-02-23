@@ -28,6 +28,9 @@ const emit = defineEmits([
     'upload-success',
 ]);
 
+const filename = ref(null);
+
+// Alert message variables
 const alertMessage = ref("");
 const alertColor = ref("primary");
 const alertDuration = ref(7); // Set in seconds
@@ -36,6 +39,9 @@ function onDrop(acceptedFiles, rejectReasons) {
     // console.log("Accepted files: ", acceptedFiles);
     if (acceptedFiles.length > 0) {
         uploadFile(acceptedFiles[0]);
+        alertColor.value = "primary";
+        alertDuration.value = 3;
+        alertMessage.value = "Uploading file..."; // Triggers alert popup
     } else {
         console.error("No valid file received.");
         alertColor.value = "warning";
@@ -45,7 +51,7 @@ function onDrop(acceptedFiles, rejectReasons) {
 }
 
 async function uploadFile(file) {
-    let filename = null;
+    filename.value = null;
 
     try {
         const formData = new FormData();
@@ -57,15 +63,16 @@ async function uploadFile(file) {
             },
         });
 
-        if (response.data.filename) { filename = response.data.filename; }
+        if (response.data.filename) { filename.value = response.data.filename; }
         else { console.error("Upload response missing filename:", response.data); }
     } catch (error) {
         console.error("Orthophoto Upload Failed:", error.response?.data || error.message);
     }
 
     // Emit outside the try/catch block
-    if (filename) {
+    if (filename.value) {
         alertColor.value = "success";
+        alertDuration.value = 15;
         alertMessage.value = "File uploaded! Generating image tiles..."; // Triggers alert popup
         await generateImageTiles(); // Now we have image, convert to COG
     }
@@ -80,7 +87,7 @@ async function generateImageTiles() {
             alertColor.value = "success";
             alertMessage.value = "Image tiles generated!"; // Triggers alert popup
             
-            emit("upload-success", filename); // Now we have succeeded! Trigger refresh in parent
+            emit("upload-success", filename.value); // Now we have succeeded! Trigger refresh in parent
         } else {
             console.warn("Unexpected response during tile generation:", response.data);
             alertColor.value = "warning";

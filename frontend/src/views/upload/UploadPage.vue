@@ -6,16 +6,13 @@
     <p><strong>Project ID:</strong> {{ selectedLocation?.id || 'Not Found' }}</p>
     <p><strong>Job ID:</strong> {{ selectedJob?.id || 'Not Found' }}</p>
 
-    <!-- Region Image Upload Component -->
+    <!-- File Upload Components -->
     <OrthophotoUploader @upload-success="onOrthophotoUpload" :jobId="selectedJob.id" />
-
-    <!-- Region Outline Upload Component -->
     <GeoJsonUploader @upload-success="onGeoJsonUpload" :jobId="selectedJob.id" />
 
     <!-- Leaflet Map -->
-    <!-- <div v-if="regionOutlineLoaded || regionTilesLoaded"> -->
     <div>
-      <h2>Region Outline</h2>
+      <h2>Region Map</h2>
       <BaseLeafletMap ref="baseMap" :layers="layers" />
       <RefreshMapData :baseMap="baseMap" />
     </div>
@@ -24,7 +21,6 @@
 
 <script setup>
 import { ref, computed, watch, } from 'vue';
-
 import api from '@/api/axios.js';
 import { useLocationStore } from '@/stores/locationStore';
 
@@ -51,50 +47,44 @@ const layers = ref([
   "region_contour",
 ]);
 
-const regionTilesLoaded = ref(false);
-watch([regionTilesLoaded], ([outline, tiles]) => {
-  console.log("Updated values:", { outline, tiles });
-});
 
 function onOrthophotoUpload(filename) {
   // console.log("Uploaded orthophoto: ", filename);
-  regionTilesLoaded.value = true;
   loadRegionTiles();
 }
 
+// TODO: exactly the same as in BaseLeafletMap; pull into layers.js and call from there
 async function loadRegionTiles() {
   try {
     const response = await api.get(`/api/get_tile_url/?location_id=${selectedLocation.value.id}&job_id=${selectedJob.value.id}`);
     if (response.data.tile_url && map.value) {
       // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
       // console.log("Adding tile layer: ", TILE_API);
-      console.log("Adding region tile layer:", response.data.tile_url);
+      // console.log("Adding region tile layer:", response.data.tile_url);
       L.tileLayer(response.data.tile_url, {
         attribution: 'COG Tiles',
+        minZoom: 10,
         maxZoom: 21,
-        timeout: 3000, // 3 seconds
         crossOrigin: true,
       }).addTo(map.value);
-      regionTilesLoaded.value = true;
     }
   } catch (error) {
     console.warn("No COG tile available or error loading tiles:", error);
   }
 }
 
-
 // Triggered after region outline uploaded
 async function onGeoJsonUpload() {
   if (!refetch.value) {
-        console.warn("⚠️ No refetch function available from BaseLeafletMap!");
-        return;
-    }
+    console.warn("⚠️ No refetch function available from BaseLeafletMap!");
+    return;
+  }
 
-    try {
-        await refetch.value(); // Refresh all geoJSON layers
-    } catch (err) {
-        console.error("❌ Refresh API call failed:", err);
-    }
+  try {
+    await refetch.value(); // Refresh all geoJSON layers
+  } catch (err) {
+    console.error("❌ Refresh API call failed:", err);
+  }
 }
 
 </script>
