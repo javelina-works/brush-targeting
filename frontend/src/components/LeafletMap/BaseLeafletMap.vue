@@ -9,7 +9,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { initializeLayers, updateLayerData, getAllLayers } from "./layers/layers";
+import { initializeLayers, updateLayerData, getAllLayers, getLayer } from "./layers/layers";
 import { useLocationStore } from '@/stores/locationStore';
 import { useMapData, updateMapData } from "@/api/graphql_queries";
 import api from '@/api/axios.js';
@@ -25,7 +25,9 @@ const props = defineProps({
   },
   layers: {
     type: Array,
-    default: () => [ "region_contour", ], // Always start with region outline
+    default: () => [ 
+      "region_contour", // Always start with region outline
+    ],
   }
 });
 
@@ -52,7 +54,7 @@ watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
   if (!newLayerControl || !newMapLayers) return;
 
   onResult((newAssets) => {
-    console.log("📡 Map data updated:", newAssets);
+    // console.log("📡 Map data updated:", newAssets);
 
     if (error.value) {
       console.error("GraphQL error:", error.value);
@@ -68,6 +70,7 @@ watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
       if (mapLayers.value[asset.name]) {
         layerControl.value.removeLayer(mapLayers.value[asset.name]);
       }
+
       updateLayerData(asset.name, asset.geojson);
       layerControl.value.addOverlay(mapLayers.value[asset.name], asset.name);
     });
@@ -115,14 +118,19 @@ const initMap = () => {
   }).addTo(map.value);
   
   L.control.scale().addTo(map.value);
+  layerControl.value = L.control.layers(null, {}, { sortLayers: true }).addTo(map.value);
 
   initializeLayers(map.value);
   mapLayers.value = getAllLayers(); // Ensure we can access all layers
 
-  // loadRegionTiles();
-  
-  layerControl.value = L.control.layers(null, {}, { sortLayers: true }).addTo(map.value);
+  // const regionOutlineLayer = getLayer("region_contour");
+  // if (regionOutlineLayer) {
+  //   console.log("Region bounds: ", regionOutlineLayer.getBounds());
+  //   map.value.fitBounds(regionOutlineLayer.getBounds());
+  // }
 
+  loadRegionTiles();
+  
   // Fix map sizing issues after a short delay
   setTimeout(() => {
     map.value.invalidateSize();

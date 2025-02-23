@@ -1,12 +1,15 @@
 <template>
-    <div>
-        <button @click="refreshMapData">Refresh Map Data</button>
+
+        <CButton class="mb-3" color="info" @click="refreshMapData">
+            Refresh Map Data
+        </CButton>
         <p v-if="refreshStatus" class="status-message">{{ refreshStatus }}</p>
-    </div>
+
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
+import { CButton } from "@coreui/vue";
 
 /** Props: Pass in the Base Map Reference */
 const props = defineProps({
@@ -38,18 +41,6 @@ async function refreshMapData() {
 </script>
 
 <style scoped>
-button {
-    padding: 8px 12px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
 
 .status-message {
     font-size: 14px;

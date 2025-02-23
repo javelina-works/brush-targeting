@@ -1,4 +1,50 @@
 {
     "type": "FeatureCollection",
-    "features": []
+    "features": [
+        {
+            "id": "0",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 230,
+                "depot_id": "depot_130"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.604073,
+                    30.249233
+                ]
+            }
+        },
+        {
+            "id": "1",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 230,
+                "depot_id": "depot_161"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.602166,
+                    30.248798
+                ]
+            }
+        },
+        {
+            "id": "2",
+            "type": "Feature",
+            "properties": {
+                "depot_radius": 230,
+                "depot_id": "depot_198"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -103.599776,
+                    30.248773
+                ]
+            }
+        }
+    ]
 }
