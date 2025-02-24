@@ -11,6 +11,7 @@ import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/search/SearchPage.vue';
 import PlannerPage from '@/views/planner/PlannerPage.vue';
 import RoutesPage from '@/views/routes/RoutesPage.vue';
+import DownloadPage from '@/views/downloads/DownloadPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
 const routes = [
@@ -22,6 +23,7 @@ const routes = [
     redirect: '/upload',
     children: [
         { path: '/upload', name: "File Uploads", component: UploadPage },
+        { path: '/downloads', name: "File Downloads", component: DownloadPage },
         { path: '/search', name: "Target Search", component: SearchPage },
         { path: '/audit', name: "Target Audit", component: AuditPage },
         { path: '/planner', name: "Mission Planner", component: PlannerPage },

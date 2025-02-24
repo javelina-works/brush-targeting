@@ -14,7 +14,10 @@ import strawberry
 from strawberry.fastapi import GraphQLRouter
 
 from backend.graphql.schema import schema
-from backend.routes import locations, jobs, upload, files, pipeline, targets, tiles, image_search
+from backend.routes import (
+    locations, jobs, upload, download, files, 
+    pipeline, targets, tiles, image_search,
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +80,7 @@ app.include_router(graphql_app, prefix="/graphql")
 app.include_router(locations.router, prefix="/api") # General locations, equivalent to a project
 app.include_router(jobs.router, prefix="/api")  # Jobs at a location. Organizes jobs for each project
 app.include_router(upload.router, prefix="/api") # Handles file uploads to server
+app.include_router(download.router, prefix="/api") # Handles file downloads from server
 app.include_router(files.router, prefix="/api") # Handles file retreival
 app.include_router(tiles.router, prefix="/api") # Tile generation and serving
 

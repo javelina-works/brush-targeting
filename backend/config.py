@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 PROCESSING_CRS = "EPSG:32613"
 DISPLAY_CRS = "EPSG:4326"
+MAX_FILE_SEARCH = 2 # Depth from job dir
+
 REGION_ORTHOPHOTO = "region_orthophoto.tif"
 REGION_ORTHOPHOTO_PNG = "region_orthophoto.png"
 REGION_COG = "region_cog.tif"
