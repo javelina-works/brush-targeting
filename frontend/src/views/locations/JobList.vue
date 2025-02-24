@@ -33,6 +33,8 @@ import api from '@/api/axios.js';
 import CreateJobModal from './CreateJobModal.vue';
 
 const showCreateJob = ref(false); // For modal popup state
+const getJobs = ref([]);
+
 
 const props = defineProps({
   jobs: {
@@ -51,10 +53,10 @@ const props = defineProps({
 
 
 async function fetchJobs() {
-  if (!selectedLocation.value) return;
+  if (!props.selectedLocation) return;
   try {
     // console.log(`Fetching jobs for location: ${selectedLocation.value.id}`);
-    const res = await api.get(`/api/jobs/?location_id=${selectedLocation.value.id}`);
+    const res = await api.get(`/api/jobs/?location_id=${props.selectedLocation.id}`);
     jobs.value = res.data;
     // console.log("Fetched jobs:", jobs.value);
   } catch (error) {
