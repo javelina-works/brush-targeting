@@ -2,7 +2,7 @@
     <div class="geojson-uploader" v-bind="getRootProps()">
         <input v-bind="getInputProps()" />
         <p v-if="isDragActive">Drop the GeoJSON file here ...</p>
-        <p v-else>Drag 'n' drop a GeoJSON file here, or click to select one</p>
+        <p v-else>Drop a GeoJSON or Shape file here, or click to select one</p>
         <CButton color="primary" @click="open">Open File Dialog</CButton>
     </div>
 </template>
@@ -61,7 +61,7 @@ export default {
         const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
             multiple: false,
             onDrop,
-            accept: ".geojson", // Ensures only .geojson files
+            accept: ".geojson, .zip", // Ensures only .geojson files
         });
 
         return {
