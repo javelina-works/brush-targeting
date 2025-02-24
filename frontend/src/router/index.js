@@ -11,7 +11,7 @@ import AuditPage from '@/views/audit/AuditPage.vue';
 import SearchPage from '@/views/search/SearchPage.vue';
 import PlannerPage from '@/views/planner/PlannerPage.vue';
 import RoutesPage from '@/views/routes/RoutesPage.vue';
-import DownloadPage from '@/views/downloads/DownloadPage.vue';
+import DownloadPage from '@/views/download/DownloadPage.vue';
 import NotFound from '@/views/NotFound.vue';
 
 const routes = [

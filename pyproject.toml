@@ -37,6 +37,8 @@ dependencies = [
     "strawberry-graphql (==0.258.1)",
     "graphql-core (<3.3.0)",
     "rio-cogeo (>=5.4.1,<6.0.0)",
+    "zipstream-ng (>=1.8.0,<2.0.0)",
+    "zipfly (>=6.0.5,<7.0.0)",
 ]
 
 

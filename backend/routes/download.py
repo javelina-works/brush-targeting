@@ -2,6 +2,9 @@ from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import FileResponse, StreamingResponse
 import os
 import zipfile
+import json
+import zipstream
+import zipfly
 import io
 from backend.config import LOCATIONS_DIR, load_data, MAX_FILE_SEARCH
 
@@ -46,37 +49,76 @@ def find_file_in_subdirectories(base_dir, file_name, max_depth=MAX_FILE_SEARCH):
     
     return None  # File not found
 
-def generate_zip_stream(job_dir, selected_files):
+def stream_zip(job_dir, selected_files):
     """
-    Streams the zip file instead of storing it in memory.
-    - Reads files in chunks to avoid high RAM usage.
-    - Yields data as the ZIP is being created.
+    Generates and streams a ZIP file in chunks instead of storing it fully in memory.
+    - Uses `io.BytesIO` to buffer and stream the zip contents.
     """
-    def stream():
-        with zipfile.ZipFile(io.BytesIO(), "w", zipfile.ZIP_DEFLATED) as zipf:
-            for file_name in selected_files:
-                file_path = find_file_in_subdirectories(job_dir, file_name, MAX_FILE_SEARCH)
+    zip_buffer = io.BytesIO()
 
-                if file_path:
-                    arcname = os.path.relpath(file_path, job_dir)  # Preserve folder structure
-                    zipf.write(file_path, arcname=arcname)
-                else:
-                    raise HTTPException(status_code=400, detail=f"File not found: {file_name}")
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for file_name in selected_files:
+            file_path = find_file_in_subdirectories(job_dir, file_name, MAX_FILE_SEARCH)
+            if file_path:
+                arcname = os.path.relpath(file_path, job_dir)  # Maintain relative structure
+                zipf.write(file_path, arcname=arcname)
+            else:
+                raise HTTPException(status_code=400, detail=f"File not found: {file_name}")
 
-            # Yield ZIP data in chunks
-            zipf.close()
-            yield zipf.fp.getvalue()
+    zip_buffer.seek(0)  # Move pointer to start of buffer for streaming
 
-    return stream()
+    def iter_chunks():
+        """Yields ZIP file content in chunks to stream to client."""
+        while chunk := zip_buffer.read(8192):  # Read in 8KB chunks
+            yield chunk
 
-@router.post("/download/{job_id}/zip")
-async def download_job_files_as_zip(job_id: str, payload: dict = Body(...)):
+    return iter_chunks()
+
+
+
+def stream_zip_response(job_dir, selected_files):
+    """
+    Uses `zipfly` to dynamically stream a ZIP file while adding files on the fly.
+    - No memory buffering: data is sent as files are added.
+    - Works efficiently for large files.
+    """
+    paths  = []
+
+    for file_name in selected_files:
+        file_path = find_file_in_subdirectories(job_dir, file_name, MAX_FILE_SEARCH)
+
+        if file_path:
+            arcname = os.path.relpath(file_path, job_dir)  # Maintain folder structure
+            paths .append({"fs": file_path, "n": arcname})
+        else:
+            raise HTTPException(status_code=400, detail=f"File not found: {file_name}")
+
+    # Configure ZipFly for streaming
+    zip_generator = zipfly.ZipFly(paths=paths)
+    # return zip_generator.generator()  # Returns a generator that streams ZIP data
+
+    # ✅ Ensure we yield each chunk of data correctly
+    def zip_stream():
+        for chunk in zip_generator.generator():
+            yield chunk  # ✅ Properly yield each chunk instead of ending early
+
+    return zip_stream()
+
+
+
+
+@router.get("/download/{job_id}/zip")
+def download_job_files_as_zip(job_id: str, payload: str = Query(...)):
     """
     Returns a ZIP file containing the selected files from a job directory.
     - Searches for files in any child directory up to MAX_DEPTH levels deep.
     """
     
-    selected_files = payload.get("selected_files", [])
+    try:
+        selected_files = json.loads(payload).get("selected_files", [])
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid payload format")
+    
     if not isinstance(selected_files, list):
         raise HTTPException(status_code=400, detail="Invalid format: `selected_files` must be a list of file names.")
     
@@ -89,22 +131,13 @@ async def download_job_files_as_zip(job_id: str, payload: dict = Body(...)):
     if not os.path.exists(job_dir):
         raise HTTPException(status_code=404, detail="No files found for this job")
 
-    # Validate file selection
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for file_name in selected_files:
-            file_path = find_file_in_subdirectories(job_dir, file_name, MAX_FILE_SEARCH)
-
-            if file_path:
-                arcname = os.path.relpath(file_path, job_dir) # Maintain relative path inside ZIP
-                zipf.write(file_path, arcname=arcname)
-            else:
-                raise HTTPException(status_code=400, detail=f"File not found: {file_name}")
-
-    zip_buffer.seek(0)
+    # zip_generator = stream_zip_response(job_dir, selected_files)
 
     return StreamingResponse(
-        zip_buffer, 
+        stream_zip_response(job_dir, selected_files),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename=job_{job_id}.zip"}
+        headers={
+            "Content-Disposition": f"attachment; filename=job_{job_id}.zip",
+            "Transfer-Encoding": "chunked",  # Ensures true streaming
+        }
     )
