@@ -12,7 +12,7 @@
                 {{ routingParametersCollapsed ? "Show Routing Settings" : "Hide Routing Settings" }}
             </CButton>
             <RefreshMapData :baseMap="baseMap" />
-
+            
             <!-- Collapsable Controls -->
             <CRow>
                 <CCol xs="6">
@@ -21,7 +21,8 @@
                     </CCollapse>
                 </CCol>
             </CRow>
-
+            
+            <WaypointManager :jobId="jobId" />
         </div>
 
     </div>
@@ -35,6 +36,8 @@ import BaseLeafletMap from '@/components/LeafletMap/BaseLeafletMap.vue';
 import SaveMapLayers from '@/components/LeafletMap/SaveMapLayers.vue';
 import RefreshMapData from '@/components/LeafletMap/RefreshMapData.vue';
 import RoutingControls from "./RoutingControls.vue";
+import WaypointManager from './WaypointManager.vue';
+
 
 const locationStore = useLocationStore();
 const locationId = computed(() => locationStore.selectedLocation?.id);
