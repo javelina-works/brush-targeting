@@ -16,7 +16,7 @@ from strawberry.fastapi import GraphQLRouter
 from backend.graphql.schema import schema
 from backend.routes import (
     locations, jobs, upload, download, files, 
-    pipeline, targets, tiles, image_search,
+    pipeline, targets, tiles, image_search, waypoints
 )
 
 # Set up logging
@@ -87,6 +87,7 @@ app.include_router(tiles.router, prefix="/api") # Tile generation and serving
 app.include_router(targets.router, prefix="/api") # Handle targets associated with a job
 app.include_router(pipeline.router, prefix="/api")
 app.include_router(image_search.router, prefix="/api") # Temporary API for image search
+app.include_router(waypoints.router, prefix="/api") # Generate output waypoint files
 
 
 # Serve static files from the Vue build directory
