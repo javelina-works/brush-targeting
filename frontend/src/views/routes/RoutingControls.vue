@@ -23,7 +23,7 @@
 import { ref, computed } from "vue";
 import { useSolveRoutesMutation } from "@/api/graphql_queries";
 import { useLocationStore } from '@/stores/locationStore';
-import { updateLayerData } from "./layers";
+import { updateLayerData } from "@/components/LeafletMap/layers/layers";
 import {
     CCardHeader, CCard, CCardBody, CFormRange, CButton,
 } from "@coreui/vue";

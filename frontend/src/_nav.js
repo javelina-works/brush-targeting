@@ -14,6 +14,12 @@ export default [
     name: 'Upload Files',
     to: '/upload',
     icon: 'cil-speedometer',
+  },
+  {
+    component: 'CNavItem',
+    name: 'Downloads',
+    to: '/downloads',
+    icon: 'cil-speedometer',
     badge: {
       color: 'primary',
       text: 'NEW',

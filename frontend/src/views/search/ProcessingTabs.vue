@@ -62,7 +62,7 @@ import {
 } from '@coreui/vue';
 
 import BaseLeafletMap from '@/components/LeafletMap/BaseLeafletMap.vue';
-import { updateLayerData, getAllLayers } from '@/components/LeafletMap/layers';
+import { updateLayerData, getAllLayers } from '@/components/LeafletMap/layers/layers';
 
 export default {
     components: { BaseLeafletMap },
