@@ -40,9 +40,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ghcr.io/javelina-works/{{ env.IMAGE_NAME }}:latest
-            ghcr.io/javelina-works/{{ env.IMAGE_NAME }}:${{ github.sha }}
-            ghcr.io/javelina-works/{{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ghcr.io/javelina-works/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/javelina-works/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/javelina-works/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -61,4 +61,4 @@ jobs:
           # RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_BRUSH_T_TOKEN }}
         run: |
-          RAILWAY_TOKEN=$RAILWAY_TOKEN railway redeploy --service {{ env.SERVICE_NAME }} -y
+          RAILWAY_TOKEN=$RAILWAY_TOKEN railway redeploy --service ${{ env.SERVICE_NAME }} -y
