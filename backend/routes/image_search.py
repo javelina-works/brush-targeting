@@ -17,7 +17,7 @@ from backend.services.plant_search.image_preprocess import (
     preprocess_image, threshold_image, identify_targets, assign_target_metadata
 )
 from backend.graphql.utils import save_geojson_file, initialize_target_files
-
+from backend.routes.upload import ensure_crs
 
 router = APIRouter()
 
@@ -156,18 +156,22 @@ async def generate_targets(job_id: str):
     # 4) Perform search for targets
     targets_gdf = identify_targets(binary_mask, transform)
     labeled_targets_gdf = assign_target_metadata(targets_gdf, job["name"], job["id"])
-    targets_geojson = labeled_targets_gdf.to_json() # Convert from GDF to geoJSON string
+    # targets_geojson = labeled_targets_gdf.to_json() # Convert from GDF to geoJSON string
 
-    # 5) Save GeoJSON
-    filename = SEARCH_TARGETS_FILE
-    if filename.endswith(".geojson"):  # Only load GeoJSON files
-        filename = filename.replace(".geojson", "")  # Strip file extension
+    # # 5) Save GeoJSON
+    # filename = SEARCH_TARGETS_FILE
+    # if filename.endswith(".geojson"):  # Only load GeoJSON files
+    #     filename = filename.replace(".geojson", "")  # Strip file extension
 
-    success = save_geojson_file(job["location_id"], job["id"], filename, targets_geojson)
-    if not success:
-        raise ValueError(f"Unable to save generated macro routes")
+    # success = save_geojson_file(job["location_id"], job["id"], filename, targets_geojson)
+    # if not success:
+    #     raise ValueError(f"Unable to save generated targets.")
 
     # Finally, reset values of 'approved_targets' and 'removed_targets'
+    labeled_targets_path = ensure_crs(labeled_targets_gdf, labeled_targets_path)
+    with open(labeled_targets_path, "r", encoding="utf-8") as f:
+        targets_geojson = json.load(f)
+
     map_path = os.path.join(job_dir, "map") # seach in map directory
     initialize_target_files(map_path) 
 

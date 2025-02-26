@@ -147,7 +147,7 @@ def ensure_crs(gdf, geojson_path, target_crs=DISPLAY_CRS):
     """Ensures the CRS is in EPSG:3857 (Web Mercator). Reprojects if needed."""
     
     if gdf.crs is None:
-        raise HTTPException(status_code=400, detail="Shapefile lacks a CRS. Unable to transform.")
+        raise HTTPException(status_code=400, detail="GDF lacks a CRS. Unable to transform.")
 
     if gdf.crs.to_string() != target_crs:
         print(f"Reprojecting from {gdf.crs} to {target_crs}")

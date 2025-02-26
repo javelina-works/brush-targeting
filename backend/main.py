@@ -100,7 +100,7 @@ Once Vue gets the path, it will decide the correct page to produce.
 That is also why the following does not work:
 `app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")`
 """
-# if os.getenv("ENV") == "production":
+# if os.getenv("DEV") == "production":
 app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="static")
 
 @app.get("/{full_path:path}")
