@@ -1,22 +1,30 @@
 <template>
   <div class="location-job-manager">
-
-    <LocationList :locations="locations" :selectedLocation="selectedLocation" @select="selectLocation" />
+    <LocationList
+      :locations="locations"
+      :selectedLocation="selectedLocation"
+      @select="selectLocation"
+      @update-locations="locations = $event"
+    />
 
     <div class="main-panel">
-      <JobList v-if="selectedLocation" :jobs="jobs" :selectedLocation="selectedLocation" @select="selectJob" />
+      <JobList
+        v-if="selectedLocation"
+        :jobs="jobs"
+        :selectedLocation="selectedLocation"
+        @select="selectJob"
+        @update-jobs="jobs = $event"
+      />
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useLocationStore } from '@/stores/locationStore';
-import LocationList from './LocationList.vue';
-import JobList from './JobList.vue';
-import api from '@/api/axios.js';
-
+import { ref, onMounted, computed } from "vue";
+import { useLocationStore } from "@/stores/locationStore";
+import LocationList from "./LocationList.vue";
+import JobList from "./JobList.vue";
+import api from "@/api/axios.js";
 
 const store = useLocationStore();
 const selectedLocation = computed(() => store.selectedLocation);
@@ -28,11 +36,15 @@ const jobs = ref([]);
 async function fetchLocations() {
   try {
     // console.log("fetchLocations() called at:", new Date().toISOString());
-    const res = await api.get('/api/locations/');
-    locations.value = res.data;
-    // console.log("Fetched locations:", locations.value);
+    const res = await api.get("/api/locations/");
+    locations.value = res.data ? res.data : []; // ✅ Safely assign fetched data
+
+    console.log("Fetched locations:", locations.value);
   } catch (error) {
-    console.error("Error fetching locations:", error.response ? error.response.data : error.message);
+    console.error(
+      "Error fetching locations:",
+      error.response ? error.response.data : error.message
+    );
   }
 }
 
@@ -40,11 +52,16 @@ async function fetchJobs() {
   if (!selectedLocation.value) return;
   try {
     // console.log(`Fetching jobs for location: ${selectedLocation.value.id}`);
-    const res = await api.get(`/api/jobs/?location_id=${selectedLocation.value.id}`);
-    jobs.value = res.data;
-    // console.log("Fetched jobs:", jobs.value);
+    const res = await api.get(
+      `/api/jobs/?location_id=${selectedLocation.value.id}`
+    );
+    jobs.value = res.data ? res.data : []; // Safely fetch jobs list
+    console.log("Fetched jobs:", jobs.value);
   } catch (error) {
-    console.error("Error fetching jobs:", error.response ? error.response.data : error.message);
+    console.error(
+      "Error fetching jobs:",
+      error.response ? error.response.data : error.message
+    );
   }
 }
 
@@ -70,8 +87,6 @@ onMounted(async () => {
     await fetchJobs(); // Only fetch jobs if a location is selected
   }
 });
-
-
 </script>
 
 <style scoped>

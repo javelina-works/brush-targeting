@@ -11,18 +11,27 @@ def ensure_audit_files(job_path):
     """
     Helper function to `fetch_map_assets`, 
     """
-       # Ensure `approved_targets.geojson` and `removed_targets.geojson` exist
+    # Ensure `approved_targets.geojson` and `removed_targets.geojson` exist
     targets_path = os.path.join(job_path, SEARCH_TARGETS_FILE)
     approved_targets_path = os.path.join(job_path, APPROVED_TARGETS_FILE)
     removed_targets_path = os.path.join(job_path, REMOVED_TARGETS_FILE)
 
+        # Default empty GeoJSON structure
+    default_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+
+    # Load targets data if available, otherwise use default
     if os.path.exists(targets_path):
         with open(targets_path, "r", encoding="utf-8") as f:
             targets_data = json.load(f)
+    else:
+        targets_data = default_geojson.copy()
 
     # Initialize `approved_targets.geojson` if missing
     if not os.path.exists(approved_targets_path):
-        approved_targets = targets_data.copy()  # Copy entire structure
+        approved_targets = targets_data.copy()
         approved_targets["name"] = "Approved Targets"
 
         with open(approved_targets_path, "w", encoding="utf-8") as f:
@@ -30,7 +39,7 @@ def ensure_audit_files(job_path):
 
     # Initialize `removed_targets.geojson` if missing
     if not os.path.exists(removed_targets_path):
-        removed_targets = targets_data.copy()  # Copy entire structure
+        removed_targets = targets_data.copy()
         removed_targets["features"] = []  # Empty feature list
         removed_targets["name"] = "Removed Targets"
 

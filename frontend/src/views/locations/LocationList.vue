@@ -1,35 +1,52 @@
 <template>
   <CCard class="sidebar">
-
     <CCardHeader>
       <h2>Locations</h2>
     </CCardHeader>
 
-    <CButton color="secondary" @click="showCreateLocation = true" class="new-button">
+    <CButton
+      color="secondary"
+      @click="showCreateLocation = true"
+      class="new-button"
+    >
       + New Location
     </CButton>
 
     <CListGroup flush>
-      <CListGroupItem v-for="location in locations" :key="location.id" as="button"
-        :active="location.id === selectedLocation?.id" @click="$emit('select', location)">
+      <CListGroupItem
+        v-for="location in locations"
+        :key="location.id"
+        as="button"
+        :active="location.id === selectedLocation?.id"
+        @click="$emit('select', location)"
+      >
         {{ location.name }}
       </CListGroupItem>
     </CListGroup>
   </CCard>
 
   <!-- Opens when triggered with button -->
-  <CreateLocationModal :isVisible="showCreateLocation" @close="handleLocationModalClose" />
+  <CreateLocationModal
+    :isVisible="showCreateLocation"
+    @close="handleLocationModalClose"
+  />
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref } from "vue";
 import {
-  CSidebar, CSidebarHeader, CSidebarBrand,
-  CListGroup, CListGroupItem, CButton,
-  CCard, CCardBody, CCardHeader,
-} from '@coreui/vue';
-import api from '@/api/axios.js';
-import CreateLocationModal from './CreateLocationModal.vue';
+  CSidebar,
+  CSidebarHeader,
+  CSidebarBrand,
+  CListGroup,
+  CListGroupItem,
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+} from "@coreui/vue";
+import api from "@/api/axios.js";
+import CreateLocationModal from "./CreateLocationModal.vue";
 
 const showCreateLocation = ref(false); // Open modal or not
 
@@ -41,17 +58,22 @@ const props = defineProps({
   selectedLocation: {
     type: String,
     default: "",
-  }
+  },
 });
+
+const emit = defineEmits(["update-locations"]);
 
 async function fetchLocations() {
   try {
     // console.log("fetchLocations() called at:", new Date().toISOString());
-    const res = await api.get('/api/locations/');
-    locations.value = res.data;
+    const res = await api.get("/api/locations/");
+    emit("update-locations", res.data); // Notify parent to update locations
     // console.log("Fetched locations:", locations.value);
   } catch (error) {
-    console.error("Error fetching locations:", error.response ? error.response.data : error.message);
+    console.error(
+      "Error fetching locations:",
+      error.response ? error.response.data : error.message
+    );
   }
 }
 
@@ -63,8 +85,7 @@ function handleLocationModalClose() {
 
 onMounted(async () => {
   await fetchLocations(); // Fetch locations first
-})
-
+});
 </script>
 
 <style scoped>

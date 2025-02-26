@@ -10,31 +10,41 @@
     </CButton>
 
     <CListGroup flush>
-      <CListGroupItem v-for="job in jobs" :key="job.id" as="button"
-        :active="job.id === selectedJob?.id" @click="$emit('select', job)">
+      <CListGroupItem
+        v-for="job in jobs"
+        :key="job.id"
+        as="button"
+        :active="job.id === selectedJob?.id"
+        @click="$emit('select', job)"
+      >
         {{ job.name }}
       </CListGroupItem>
     </CListGroup>
-
   </CCard>
 
-  <CreateJobModal :isVisible="showCreateJob" :locationId="selectedLocation?.id" 
-  @close="showCreateJob = false" @created="fetchJobs" />
-
+  <CreateJobModal
+    :isVisible="showCreateJob"
+    :locationId="selectedLocation?.id"
+    @close="showCreateJob = false"
+    @created="fetchJobs"
+  />
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref } from "vue";
 import {
-  CListGroup, CListGroupItem, CButton,
-  CCard, CCardBody, CCardHeader,
-} from '@coreui/vue';
-import api from '@/api/axios.js';
-import CreateJobModal from './CreateJobModal.vue';
+  CListGroup,
+  CListGroupItem,
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+} from "@coreui/vue";
+import api from "@/api/axios.js";
+import CreateJobModal from "./CreateJobModal.vue";
 
 const showCreateJob = ref(false); // For modal popup state
 const getJobs = ref([]);
-
 
 const props = defineProps({
   jobs: {
@@ -51,29 +61,32 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["update-jobs"]);
 
 async function fetchJobs() {
   if (!props.selectedLocation) return;
   try {
     // console.log(`Fetching jobs for location: ${selectedLocation.value.id}`);
-    const res = await api.get(`/api/jobs/?location_id=${props.selectedLocation.id}`);
-    jobs.value = res.data;
+    const res = await api.get(
+      `/api/jobs/?location_id=${props.selectedLocation.id}`
+    );
+    emit("update-jobs", res.data); // Notify parent to update jobs
     // console.log("Fetched jobs:", jobs.value);
   } catch (error) {
-    console.error("Error fetching jobs:", error.response ? error.response.data : error.message);
+    console.error(
+      "Error fetching jobs:",
+      error.response ? error.response.data : error.message
+    );
   }
 }
 
-
 onMounted(async () => {
   await fetchJobs(); // TODO: check if location set first?
-})
-
+});
 </script>
 
 <style scoped>
 .new-button {
   margin-bottom: 10px;
 }
-
 </style>
