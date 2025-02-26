@@ -95,7 +95,12 @@ def list_files(job_id: str):
         raise HTTPException(status_code=404, detail="Job directory not found")
 
     # Categorized file storage
-    categorized_files = {"geojson": [], "images": [], "other": []}
+    categorized_files = {
+        "geojson": [], 
+        "images": [], 
+        "other": [],
+        "waypoints": [],
+    }
 
     for root, _, filenames in os.walk(job_dir):
         for filename in filenames:
@@ -105,6 +110,8 @@ def list_files(job_id: str):
                 categorized_files["geojson"].append(filename)
             elif file_extension in ["tiff", "png", "jpg", "jpeg"]:
                 categorized_files["images"].append(filename)
+            if file_extension in ["waypoints"]:
+                categorized_files["waypoints"].append(filename)
             else:
                 categorized_files["other"].append(filename)
 

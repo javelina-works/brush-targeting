@@ -24,7 +24,11 @@ export const layerFactory = {
   approved_targets: () =>
     L.geoJSON(null, {
       pointToLayer: (feature, latlng) =>
-        L.circleMarker(latlng, { color: "blue", radius: 5, bubblingMouseEvents: false }),
+        L.circleMarker(latlng, {
+          color: "blue",
+          radius: 5,
+          bubblingMouseEvents: false,
+        }),
       onEachFeature: (feature, layer) => {
         // layer.bindPopup(
         //   `<b>Approved Target</b><br>ID: ${feature.properties.id}`
@@ -39,19 +43,19 @@ export const layerFactory = {
   removed_targets: () =>
     L.geoJSON(null, {
       pointToLayer: (feature, latlng) =>
-        L.circleMarker(latlng, { 
-            color: "red", radius: 5, 
-            bubblingMouseEvents: false, // Don't trigger click events on greater map
+        L.circleMarker(latlng, {
+          color: "red",
+          radius: 5,
+          bubblingMouseEvents: false, // Don't trigger click events on greater map
         }),
       onEachFeature: (feature, layer) => {
         // layer.bindPopup(
         //   `<b>Removed Target</b><br>ID: ${feature.properties.id}`
         // );
         layer.on("click", (e) => {
-            e.originalEvent.stopPropagation(); // Don't send up to map
-            moveFeature(feature, "removed_targets", "approved_targets");
-        }
-        );
+          e.originalEvent.stopPropagation(); // Don't send up to map
+          moveFeature(feature, "removed_targets", "approved_targets");
+        });
       },
     }),
 
@@ -122,6 +126,41 @@ export const layerFactory = {
         );
       },
     }),
+
+  micro_routes: () => {
+    function getRandomColor() {
+      return `#${Math.floor(Math.random() * 16777215).toString(16)}`; // Random hex color
+    }
+    const routes_geojson = L.geoJSON(null, {
+      style: (feature) => ({
+        color: getRandomColor(), // Random hex color
+        weight: 2,
+        opacity: 1,
+        dashArray: [4, 4],
+        fill: false,
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.on({
+          mouseover: (e) => {
+            e.target.setStyle({
+              // color: "green",
+              weight: 5, // Thicker when hovered
+              dashArray: "", // Solid line when hovered
+            });
+          },
+          mouseout: (e) => {
+            e.target.setStyle({
+              weight: 2,
+              dashArray: [4, 4],
+            });
+            // routes_geojson.resetStyle(e.target); // Reset to default style
+          },
+        });
+      },
+    });
+    return routes_geojson;
+  },
+
   default: () =>
     L.geoJSON(null, {
       pointToLayer: (feature, latlng) =>
@@ -185,12 +224,13 @@ export function getAllLayers() {
 
     // 🔹 Extract GeoJSON, but only store the marker (not the radius circle)
     if (layerKey === "depot_points") {
+      // console.log("Fetching depots layer: ", layer);
       // Iterate through each depot layer group
       layer.eachLayer((group) => {
         // 🟢 Ensure we only extract the marker (not the circle)
         group.eachLayer((subLayer) => {
           if (!subLayer.feature) {
-            // console.log("Removing layer", subLayer);
+            console.log("Removing layer", subLayer);
             group.removeLayer(subLayer); // Remove layer with no features to prevent duplication
           }
         });
@@ -208,14 +248,14 @@ export function moveFeature(feature, fromLayer, toLayer) {
 
   if (mapLayers[fromLayer]) {
     console.log("Removing feature from : ", fromLayer, feature);
-    mapLayers[fromLayer].eachLayer(layer => {
-        if (layer.feature === feature) {
-            mapLayers[fromLayer].removeLayer(layer);
-        }
+    mapLayers[fromLayer].eachLayer((layer) => {
+      if (layer.feature === feature) {
+        mapLayers[fromLayer].removeLayer(layer);
+      }
     });
-}
-if (mapLayers[toLayer]) {
-      console.log("Adding to : ", toLayer, feature);
+  }
+  if (mapLayers[toLayer]) {
+    console.log("Adding to : ", toLayer, feature);
     mapLayers[toLayer].addData(feature);
   }
 }
