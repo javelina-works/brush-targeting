@@ -16,7 +16,7 @@ from backend.services.plant_search.load_image import load_image
 from backend.services.plant_search.image_preprocess import (
     preprocess_image, threshold_image, identify_targets, assign_target_metadata
 )
-from backend.graphql.utils import save_geojson_file
+from backend.graphql.utils import save_geojson_file, initialize_target_files
 
 
 router = APIRouter()
@@ -166,6 +166,10 @@ async def generate_targets(job_id: str):
     success = save_geojson_file(job["location_id"], job["id"], filename, targets_geojson)
     if not success:
         raise ValueError(f"Unable to save generated macro routes")
+
+    # Finally, reset values of 'approved_targets' and 'removed_targets'
+    map_path = os.path.join(job_dir, "map") # seach in map directory
+    initialize_target_files(map_path) 
 
     return {
         "message": "Targets generated", 
