@@ -889,6 +889,11 @@ is-number@^7.0.0:
   resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
 
+leaflet.fullscreen@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/leaflet.fullscreen/-/leaflet.fullscreen-3.0.2.tgz#b37e66ae0d16a139a98a1641bec4a9403915fe2d"
+  integrity sha512-m27waFVmwdrLGXjZw2L8b7w/W28EY+u7IGzK2x8K99XaPuzKbjI+/H1j0OMawLcRPZyDRh+39XpyLsvDwHUEoA==
+
 leaflet@^1.9.4:
   version "1.9.4"
   resolved "https://registry.yarnpkg.com/leaflet/-/leaflet-1.9.4.tgz#23fae724e282fa25745aff82ca4d394748db7d8d"

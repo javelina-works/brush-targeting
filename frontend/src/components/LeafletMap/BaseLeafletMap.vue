@@ -5,14 +5,21 @@
 </template>
 
 <script setup>
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet.fullscreen";
+import "leaflet.fullscreen/Control.FullScreen.css";
 
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { initializeLayers, updateLayerData, getAllLayers, getLayer } from "./layers/layers";
-import { useLocationStore } from '@/stores/locationStore';
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import {
+  initializeLayers,
+  updateLayerData,
+  getAllLayers,
+  getLayer,
+} from "./layers/layers";
+import { useLocationStore } from "@/stores/locationStore";
 import { useMapData, updateMapData } from "@/api/graphql_queries";
-import api from '@/api/axios.js';
+import api from "@/api/axios.js";
 
 const props = defineProps({
   center: {
@@ -25,10 +32,10 @@ const props = defineProps({
   },
   layers: {
     type: Array,
-    default: () => [ 
+    default: () => [
       "region_contour", // Always start with region outline
     ],
-  }
+  },
 });
 
 /** Location and Job reference setup */
@@ -38,7 +45,13 @@ const jobId = computed(() => locationStore.selectedJob?.id);
 const shouldQueryRun = computed(() => !!locationId.value && !!jobId.value);
 
 /** Map API query setups */
-const { result: getResult, refetch, loading, error, onResult } = useMapData(locationId.value, jobId.value, props.layers);
+const {
+  result: getResult,
+  refetch,
+  loading,
+  error,
+  onResult,
+} = useMapData(locationId.value, jobId.value, props.layers);
 const { mutate: updateMapAssets, error: updateError } = updateMapData();
 
 /** Map container reference */
@@ -50,30 +63,36 @@ const mapLayers = ref({}); // Store all layers for easy access
 const regionTilesLoaded = ref(false);
 
 /** Load and Apply API Data to Map */
-watch([layerControl, mapLayers], ([newLayerControl, newMapLayers]) => {
-  if (!newLayerControl || !newMapLayers) return;
+watch(
+  [layerControl, mapLayers],
+  ([newLayerControl, newMapLayers]) => {
+    if (!newLayerControl || !newMapLayers) return;
 
-  onResult((newAssets) => {
-    // console.log("📡 Map data updated:", newAssets);
+    onResult((newAssets) => {
+      // console.log("📡 Map data updated:", newAssets);
 
-    if (error.value)   { console.error("GraphQL error:", error.value); }
-    if (loading.value) { console.log("Data is still loading..."); }
-    
-    if (!newAssets?.data?.mapAssets) return;
-    if (!layerControl.value || !mapLayers.value) return;
-
-    newAssets.data.mapAssets.forEach((asset) => {
-      if (mapLayers.value[asset.name]) {
-        layerControl.value.removeLayer(mapLayers.value[asset.name]);
+      if (error.value) {
+        console.error("GraphQL error:", error.value);
+      }
+      if (loading.value) {
+        console.log("Data is still loading...");
       }
 
-      updateLayerData(asset.name, asset.geojson);
-      layerControl.value.addOverlay(mapLayers.value[asset.name], asset.name);
+      if (!newAssets?.data?.mapAssets) return;
+      if (!layerControl.value || !mapLayers.value) return;
+
+      newAssets.data.mapAssets.forEach((asset) => {
+        if (mapLayers.value[asset.name]) {
+          layerControl.value.removeLayer(mapLayers.value[asset.name]);
+        }
+
+        updateLayerData(asset.name, asset.geojson);
+        layerControl.value.addOverlay(mapLayers.value[asset.name], asset.name);
+      });
     });
-  });
-}, { immediate: true });
-
-
+  },
+  { immediate: true }
+);
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -81,15 +100,17 @@ async function loadRegionTiles() {
   if (regionTilesLoaded.value) return; // Prevent duplicate calls if already setup
 
   try {
-    const response = await api.get(`/api/get_tile_url/?location_id=${locationId.value}&job_id=${jobId.value}`);    
+    const response = await api.get(
+      `/api/get_tile_url/?location_id=${locationId.value}&job_id=${jobId.value}`
+    );
     if (response.data.tile_url && map.value) {
       // const TILE_API = `${BACKEND_URL}/api/tile/${selectedLocation.value.id}/${selectedJob.value.id}/{z}/{x}/{y}.png`;
       // console.log("Adding tile layer: ", TILE_API);
       console.log("Adding region tile layer:", response.data.tile_url);
       L.tileLayer(response.data.tile_url, {
-        attribution: 'COG Tiles',
+        attribution: "COG Tiles",
         minZoom: 10,
-        maxZoom: 21,
+        maxZoom: 22,
       }).addTo(map.value);
       regionTilesLoaded.value = true;
     }
@@ -104,17 +125,44 @@ const initMap = () => {
     center: props.center,
     zoom: props.zoom,
     minZoom: 6,
-    maxZoom: 21,
+    maxZoom: 22,
     zoomAnimation: false, // https://stackoverflow.com/a/66516334
     preferCanvas: true,
   });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    crossOrigin: true,
-  }).addTo(map.value);
-  
+  // Prepare basemap and overlay map layers
+  const OSM_base = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      crossOrigin: true,
+    }
+  );
+
+  const ESRI_base = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution:
+        "&copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      maxZoom: 22,
+    }
+  ).addTo(map.value); // Default added layer
+
+  const baseMaps = {
+    "OpenStreetMap": OSM_base,
+    "ESRI Geographic": ESRI_base,
+  };
+
+  layerControl.value = L.control
+    .layers(baseMaps, {}, { sortLayers: true })
+    .addTo(map.value);
+
   L.control.scale().addTo(map.value);
-  layerControl.value = L.control.layers(null, {}, { sortLayers: true }).addTo(map.value);
+  L.control
+    .fullscreen({
+      title: "Enter map fullscreen",
+      titleCancel: "Exit map fullscreen",
+    })
+    .addTo(map.value);
 
   initializeLayers(map.value);
   mapLayers.value = getAllLayers(); // Ensure we can access all layers
@@ -126,22 +174,20 @@ const initMap = () => {
   // }
 
   loadRegionTiles();
-  
+
   // Fix map sizing issues after a short delay
   setTimeout(() => {
     map.value.invalidateSize();
   }, 300);
-
-}
-
+};
 
 onMounted(() => {
   if (!mapContainer.value) {
     console.error("Map container not ready.");
     return;
   }
-  
-  if ( !shouldQueryRun.value ) {
+
+  if (!shouldQueryRun.value) {
     console.warn("Location or Job ID not available. Skipping map init.");
     return;
   }
@@ -161,7 +207,6 @@ onUnmounted(() => {
 
 /** Expose map instance */
 defineExpose({ map, mapLayers, layerControl, refetch });
-
 </script>
 
 <style scoped>

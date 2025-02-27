@@ -1,3 +1,6 @@
+# Ignore all media related to locations and projects
+backend/media/*
+
 # Ignore all uploaded orthophotos in the media directory
 backend/media/*/images/*
 
