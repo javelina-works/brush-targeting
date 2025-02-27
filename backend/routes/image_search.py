@@ -168,7 +168,7 @@ async def generate_targets(job_id: str):
     #     raise ValueError(f"Unable to save generated targets.")
 
     # Finally, reset values of 'approved_targets' and 'removed_targets'
-    labeled_targets_path = ensure_crs(labeled_targets_gdf, labeled_targets_path)
+    labeled_targets_path = ensure_crs(labeled_targets_gdf, targets_path)
     with open(labeled_targets_path, "r", encoding="utf-8") as f:
         targets_geojson = json.load(f)
 
